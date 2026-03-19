@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     # Tvoje aplikace
 
     'api',
+    'profile_app',
 ]
 
 MIDDLEWARE = [

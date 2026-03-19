@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework import status
+from profile_app.models import Player_info
 
 
 @api_view(['POST'])
@@ -21,8 +22,13 @@ def registrace(request):
     if User.objects.filter(username=username).exists():
         return Response({"error": "Uživatel již existuje"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Vytvoření uživatele
+    # Vytvoření uživatele (Django automaticky hash hesla)
     user = User.objects.create_user(username=username, password=password, email=email)
+    
+    # Vytvoření profilu hráče
+    Player_info.objects.create(username=user)
+    
+    
     # Vytvoření tokenu pro okamžité přihlášení po registraci
     token = Token.objects.create(user=user)
     
