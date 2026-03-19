@@ -1,0 +1,9 @@
+# Python a Django
+__pycache__/
+*.py[cod]
+*$py.class
+db.sqlite3
+
+# Prostředí a tajnosti (kritické nezveřejňovat!)
+venv_backend/
+.env
