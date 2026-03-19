@@ -4,5 +4,5 @@ from . import views
 urlpatterns = [
     path('test/', views.test_spojeni, name='test_spojeni'), #
     path('registrace/', views.registrace, name='registrace'),
-    path('login/', views.CustomAuthToken.as_view(), name='api_token_auth'), #custome přihlášneí
+    path('login/', views.login_view, name='login'), #custome přihlášneí
 ]

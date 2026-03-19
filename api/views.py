@@ -1,8 +1,8 @@
-from rest_framework.authtoken.views import ObtainAuthToken
+from django.contrib.auth import authenticate
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from rest_framework.decorators import api_view
+from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
-from rest_framework.decorators import permission_classes
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework import status
@@ -43,3 +43,25 @@ def test_spojeni(request):
 # Tato třída zajistí, že login bude vždy dostupný a bude vracet Token
 class CustomAuthToken(ObtainAuthToken):
     permission_classes = [AllowAny]
+    
+    
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    # Autentizace uživatele
+    user = authenticate(username=username, password=password)
+
+    if user:
+        # Pokud uživatel existuje a heslo sedí, získáme nebo vytvoříme token
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            "token": token.key,
+            "username": user.username,
+            "message": "Přihlášení úspěšné"
+        }, status=status.HTTP_200_OK)
+    
+    return Response({"error": "Neplatné přihlašovací údaje"}, status=status.HTTP_400_BAD_REQUEST)
