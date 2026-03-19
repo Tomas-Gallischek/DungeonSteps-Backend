@@ -32,11 +32,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # Knihovny třetích stran
+    'rest_framework.authtoken', # Povolí generování tokenů
     'rest_framework',
     'corsheaders',      # Důležité pro komunikaci s Kivy
     'whitenoise.runserver_nostatic', # Vylepšený vývojový server pro statiku
     
     # Tvoje aplikace
+
     'api',
 ]
 
@@ -112,3 +114,13 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 CORS_ALLOW_ALL_ORIGINS = True 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated', # V základu bude vše zamčené
+    ],
+}
