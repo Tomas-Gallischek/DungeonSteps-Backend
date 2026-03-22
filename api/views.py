@@ -7,22 +7,27 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+import random
 
 
 # NAČÍTÁNÍ MODELU
-from profile_app.models import Player_info
+from profile_app.models import Player_info, Player_Items
+from item_app.models import Item_default
 
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
 from profile_app.atributs import atr_up, atr_role_default
+from item_app.item_generator import item_generator_all
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_player_profile(request):
+    
     user = request.user
     player = Player_info.objects.filter(username=user).first()
+    all_items = Player_Items.objects.all().filter(player=player)  # Získáme všechny položky patřící hráči
     
     if not player:
         return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
@@ -44,8 +49,26 @@ def get_player_profile(request):
         
         # points
         "atr_points": player.atr_points,   
-        "skill_points": player.skill_points
+        "skill_points": player.skill_points,
         
+        # items
+        "all_items": [{
+            "item_status": item.item_status,
+            "item_id": item.item_id,
+            "item_name": item.name,
+            "item_description": item.description,
+            "item_category": item.category,
+            "item_dmg_type": item.dmg_type,
+            "lvl_req": item.lvl_req,
+            "item_rarity": item.rarity,
+            "price": item.price,
+            "dmg_min": item.dmg_min,
+            "dmg_max": item.dmg_max,
+            "dmg_avg": item.dmg_avg,
+            "armor": item.armor,
+            "item_bonus": item.item_bonus,
+        } for item in all_items]
+  
         
     }, status=status.HTTP_200_OK)
 
@@ -76,12 +99,6 @@ def add_atr(request):
 
     
     return Response({"message": f"Úspěšně zvýšen {atr_name} na {getattr(player, f'{atr_name}_stats')}"}, status=status.HTTP_200_OK)
-
-
-
-
-
-
 
 
 
@@ -136,7 +153,57 @@ def admin_plus_xp(request):
     return Response({"message": f"Úspěšně odesláno: {amount} XP pro hráče {user.username}"}, status=status.HTTP_200_OK)
 
 
+# ADMIN - PŘIDÁVÁNÍ NÁHODNÉ VĚCI
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_random_item(request):
+    print("Funkce admin_random_item byla zavolána!")
+    user = request.user 
 
+    player = Player_info.objects.filter(username=user).first()
+    if not player:
+        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+    all_items = Item_default.objects.all()
+    random_item = random.choice(all_items)
+    
+    item_status = "inventory"
+    
+    item_generator_all(user=user, item_status=item_status, item_base_id=random_item.item_base_id)
+
+    return Response({"message": f"Náhodná věc úspěšně vygenerována pro hráče {user.username}"}, status=status.HTTP_200_OK)
+
+
+# NASAZOVÁNÍ A SUNDÁVÁNÍ VĚCÍ (OPTIMISTICKÝ UPDATE)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_equip(request):
+    user = request.user 
+
+    item_name = request.data.get('item_name')
+    new_status = request.data.get('new_status')
+    item_id = request.data.get('item_id')
+
+    if new_status not in ['equipped', 'inventory']:
+        return Response({"error": "Neplatný status položky"}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+    player = Player_info.objects.filter(username=user).first()
+    if not player:
+        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+    item = Player_Items.objects.filter(item_id=item_id).first()
+    
+    if not item:
+        return Response({"error": "Položka nebyla nalezena"}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        item.item_status = new_status
+        item.save()
+        return Response({"message": f"Status položky '{item_name}' úspěšně změněn na '{new_status}'"}, status=status.HTTP_200_OK)
+    
+    
 
 # REGISTRACE UŽIVATELE
 @api_view(['POST'])
@@ -187,6 +254,10 @@ def registrace(request):
     # Přiřazení základních atributů podle role
     atr_role_default(user=user, role=role)
     
+    # přiřazení základní výbavy
+    items_id = [1,2]
+    for i in items_id:
+        item_generator_all(user=user, item_status="inventory", item_base_id=i)
     
     
     

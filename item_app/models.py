@@ -19,6 +19,7 @@ class Item_default(models.Model):
     ]
     
     name = models.CharField(max_length=100)
+    item_base_id = models.IntegerField(unique=True, blank=True, null=True) # unikátní ID pro každý základní item, slouží k identifikaci při generování a upgradu
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     dmg_type = models.CharField(max_length=50, choices=DMG_TYPE_CHOICES)
@@ -37,4 +38,15 @@ class Item_default(models.Model):
     
     def __str__(self):
         return self.name
-# 
+
+
+class All_Items_Bonus(models.Model):
+    name = models.CharField(max_length=100, blank=True, null=True) # název bonusu, např. "Strength Bonus", "Agility Bonus", atd.
+    description = models.TextField(max_length=500, blank=True, null=True) # popis bonusu
+    bonus_type = models.CharField(max_length=50, blank=True, null=True) # typ bonusu, např. "strength", "agility", "intellect", "hp", "mp", atd.
+    min_value = models.FloatField(blank=True, null=True) # minimální hodnota bonusu
+    max_value = models.FloatField(blank=True, null=True) # maximální hodnota bonusu
+    
+    def __str__(self):
+        return f"{self.name} - {self.bonus_type}: {self.min_value} - {self.max_value}" 
+

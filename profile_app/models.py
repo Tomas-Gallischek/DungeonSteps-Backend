@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Player_info(models.Model):
@@ -69,3 +69,66 @@ class Player_info(models.Model):
 
     def __str__(self):
         return f"{self.username} - lvl: {self.lvl} - xp: {self.xp} - gold: {self.gold}"
+    
+    
+
+class Player_Items(models.Model):
+    CATEGORY_CHOICES = [
+        ('weapon', 'Weapon'),
+        ('armor', 'Armor'),
+        ('other', 'Other'),
+    ]
+    
+    DMG_TYPE_CHOICES = [
+        ('heavy', 'Heavy'),
+        ('light', 'Light'),
+        ('magic', 'Magic'),
+        ('none', 'None'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('equipped', 'Equipped'),
+        ('inventary', 'Inventory'),
+        ('shop', 'Shop'),
+        ('drop', 'Drop'),
+        ('none', 'None'),
+        ('sold', 'Sold'), # TOTO POTÉ NASTAVIT NA UTOMATICKÉ PROMAZÁVÁNÍ, JE TO JEN POJISTKA
+    ]
+    
+    RARITY_CHOICES = [
+        ('common', 'Common'),
+        ('rare', 'Rare'),
+        ('epic', 'Epic'),
+        ('legendary', 'Legendary'),
+    ]
+    
+    player = models.ForeignKey(Player_info, on_delete=models.CASCADE, related_name='items')
+    item_id = models.AutoField(primary_key=True, unique=True)
+    item_base_id = models.IntegerField(blank=True, null=True) # odkaz na základní item pro případ upgradu a generování, může být null pro unikátní předměty vytvořené jen pro hráče
+    item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='none')
+    
+
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    dmg_type = models.CharField(max_length=50, choices=DMG_TYPE_CHOICES)
+    lvl_req = models.IntegerField(null=True, blank=True)
+    rarity = models.CharField(max_length=20, choices=RARITY_CHOICES)
+    price = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
+    
+    dmg_min = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
+    dmg_max = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
+    dmg_avg = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
+    
+    armor = models.IntegerField(null=True, blank=True)
+    
+    
+    drop_lvl_min = models.IntegerField(null=True, blank=True)
+    drop_lvl_max = models.IntegerField(null=True, blank=True)
+    drop_rate = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(1)])
+    
+    item_bonus = models.JSONField(default=dict)  # Ukládá bonusy z předmětu jako JSON
+
+
+    def __str__(self):
+        return f"{self.name} (ID: {self.item_id}) - {self.category} - {self.rarity} - Status: {self.item_status}"

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     'api',
     'profile_app',
+    'item_app',
 ]
 
 MIDDLEWARE = [

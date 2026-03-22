@@ -1,7 +1,9 @@
 from django.contrib import admin
-from .models import Player_info
+from .models import Player_info, Player_Items
 
 admin.site.register(Player_info)
+admin.site.register(Player_Items)
+
 
 admin.site.site_header = "Player Profile Admin"
 admin.site.site_title = "Player Profile Admin Portal"
