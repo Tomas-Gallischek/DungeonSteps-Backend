@@ -45,7 +45,9 @@ class Player_info(models.Model):
     hp = models.IntegerField(default=50, blank=True)
     attack_number = models.IntegerField(default=1, blank=True)
     attack_speed = models.FloatField(default=1, blank=True)
-    defence_number = models.IntegerField(default=1, blank=True)    
+    defence_number = models.IntegerField(default=1, blank=True)   
+    crit_chance = models.FloatField(default=0, blank=True)
+    crit_multiplier = models.FloatField(default=1.5, blank=True) 
 
     def __str__(self):
         return f"{self.username} - lvl: {self.lvl} - xp: {self.xp} - gold: {self.gold}"

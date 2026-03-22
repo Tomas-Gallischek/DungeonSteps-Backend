@@ -1,12 +1,18 @@
+# NAČÍTÁNÍ KNIHOVEN
 from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+
+# NAČÍTÁNÍ MODELU
 from profile_app.models import Player_info
+
+# NAČÍTÁNÍ FUNKCÍ
+from profile_app.economy import gold_plus
 
 
 @api_view(['POST'])
@@ -33,22 +39,6 @@ def registrace(request):
     token = Token.objects.create(user=user)
     
     return Response({"token": token.key, "message": "Registrace proběhla úspěšně"}, status=status.HTTP_201_CREATED)
-
-
-@api_view(['GET'])
-def test_spojeni(request):
-    # Tento slovník se automaticky převede na formát JSON
-    data = {
-        "status": "success",
-        "message": "Ahoj! Backend a frontend spolu úspěšně komunikují."
-    }
-    return Response(data)
-
-
-
-# Tato třída zajistí, že login bude vždy dostupný a bude vracet Token
-class CustomAuthToken(ObtainAuthToken):
-    permission_classes = [AllowAny]
     
     
 
@@ -71,3 +61,19 @@ def login_view(request):
         }, status=status.HTTP_200_OK)
     
     return Response({"error": "Neplatné přihlašovací údaje"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated]) # Tady ZAMYKÁME endpoint jen pro přihlášené!
+def admin_plus_gold(request):
+    print("Funkce admin_plus_gold byla zavolána!")
+    hrac = request.user # identifikace přihlášeného uživatele
+    amount = request.data.get('amount') # očekáváme, že frontend nám pošle množství zlata, které chceme přidat
+
+    gold_plus(user=hrac, amount=amount) # zavoláme funkci z economy.py, která přidá zlato hráči
+
+
+    
+    return Response({"message": f"Úspěšně odesláno: {amount} zlata pro hráče {hrac.username}"}, status=status.HTTP_200_OK)
