@@ -8,11 +8,13 @@ from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
+
 # NAČÍTÁNÍ MODELU
 from profile_app.models import Player_info
 
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
+from profile_app.lvl_xp_def import xp_plus
 
 
 @api_view(['POST'])
@@ -72,8 +74,37 @@ def admin_plus_gold(request):
     hrac = request.user # identifikace přihlášeného uživatele
     amount = request.data.get('amount') # očekáváme, že frontend nám pošle množství zlata, které chceme přidat
 
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return Response({"error": "Parametr 'amount' musí být celé číslo"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if amount <= 0:
+        return Response({"error": "Parametr 'amount' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
+
     gold_plus(user=hrac, amount=amount) # zavoláme funkci z economy.py, která přidá zlato hráči
 
-
-    
     return Response({"message": f"Úspěšně odesláno: {amount} zlata pro hráče {hrac.username}"}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_plus_xp(request):
+    print("Funkce admin_plus_xp byla zavolána!")
+    hrac = request.user 
+    mnozstvi = request.data.get('mnozstvi') # Frontend (Kivy) posílá parametr 'mnozstvi'
+
+    try:
+        mnozstvi = int(mnozstvi)
+    except (TypeError, ValueError):
+        return Response({"error": "Parametr 'mnozstvi' musí být celé číslo"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if mnozstvi <= 0:
+        return Response({"error": "Parametr 'mnozstvi' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Najdeme profil hráče podle jména, pokud chybí tak ho vytvoříme
+    profil, _ = Player_info.objects.get_or_create(username=hrac)
+
+    # Zavoláme tvoji připravenou funkci z lvl_xp_def.py
+    xp_plus(player_info=profil, xp_amount=mnozstvi)
+
+    return Response({"message": f"Úspěšně odesláno: {mnozstvi} XP pro hráče {hrac.username}"}, status=status.HTTP_200_OK)
