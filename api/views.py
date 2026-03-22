@@ -115,6 +115,6 @@ def admin_plus_xp(request):
         return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
 
     # OPRAVA: Tvá funkce xp_plus očekává parametr, který se jmenuje 'player_info'
-    xp_plus(player_info=player, xp_amount=amount)
+    xp_plus(user=user, xp_amount=amount)
 
     return Response({"message": f"Úspěšně odesláno: {amount} XP pro hráče {user.username}"}, status=status.HTTP_200_OK)
