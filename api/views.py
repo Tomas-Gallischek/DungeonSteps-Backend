@@ -67,7 +67,11 @@ def get_player_profile(request):
             "dmg_avg": item.dmg_avg,
             "armor": item.armor,
             "item_bonus": item.item_bonus,
-        } for item in all_items]
+        } for item in all_items],
+        
+        # EQP
+        "weapon_equipped": player.weapon,
+        "armor_equipped": player.armor,
   
         
     }, status=status.HTTP_200_OK)
@@ -180,7 +184,7 @@ def admin_random_item(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def toggle_equip(request):
-    user = request.user 
+    user = request.user
 
     item_name = request.data.get('item_name')
     new_status = request.data.get('new_status')
@@ -198,9 +202,28 @@ def toggle_equip(request):
     
     if not item:
         return Response({"error": "Položka nebyla nalezena"}, status=status.HTTP_404_NOT_FOUND)
+    
+    
+# USPĚŠNÉ NASAZENÍ / SUNDÁNÍ
     else:
+        if new_status == 'equipped':
+            if item.category == 'weapon' and player.weapon:
+                return Response({"error": "Již máte vybavenou zbraň"}, status=status.HTTP_400_BAD_REQUEST)
+            if item.category == 'armor' and player.armor:
+                return Response({"error": "Již máte vybavenou zbroj"}, status=status.HTTP_400_BAD_REQUEST)
+            if item.category == 'weapon':
+                player.weapon = True
+            if item.category == 'armor':
+                player.armor = True
+        elif new_status == 'inventory':
+            if item.category == 'weapon':
+                player.weapon = False
+            if item.category == 'armor':
+                player.armor = False
+            
         item.item_status = new_status
         item.save()
+        player.save()
         return Response({"message": f"Status položky '{item_name}' úspěšně změněn na '{new_status}'"}, status=status.HTTP_200_OK)
     
     

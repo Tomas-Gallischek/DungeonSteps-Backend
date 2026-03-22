@@ -66,6 +66,10 @@ class Player_info(models.Model):
     defence_number = models.IntegerField(default=1, blank=True)   
     crit_chance = models.FloatField(default=0, blank=True)
     crit_multiplier = models.FloatField(default=1.5, blank=True) 
+    
+# EQP
+    weapon = models.BooleanField(("Weapon Equipped"), default=False,)
+    armor = models.BooleanField(("Armor Equipped"), default=False,)
 
     def __str__(self):
         return f"{self.username} - lvl: {self.lvl} - xp: {self.xp} - gold: {self.gold}"
