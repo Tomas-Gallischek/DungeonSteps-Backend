@@ -17,6 +17,7 @@ from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
 
 
+# REGISTRACE UŽIVATELE
 @api_view(['POST'])
 @permission_classes([AllowAny]) # Registrace musí být přístupná všem
 def registrace(request):
@@ -43,7 +44,7 @@ def registrace(request):
     return Response({"token": token.key, "message": "Registrace proběhla úspěšně"}, status=status.HTTP_201_CREATED)
     
     
-
+# LOGIN UŽIVATELE - VLASTNÍ IMPLEMENTACE (NEPOUŽÍVÁME DJANGO REST FRAMEWORK TOKEN AUTH)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
@@ -66,13 +67,13 @@ def login_view(request):
 
 
 
-
+# ADMIN - PŘIDÁVÁNÍ GOLDŮ
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) # Tady ZAMYKÁME endpoint jen pro přihlášené!
+@permission_classes([IsAuthenticated])
 def admin_plus_gold(request):
     print("Funkce admin_plus_gold byla zavolána!")
-    hrac = request.user # identifikace přihlášeného uživatele
-    amount = request.data.get('amount') # očekáváme, že frontend nám pošle množství zlata, které chceme přidat
+    user = request.user # Django User objekt
+    amount = request.data.get('amount') 
 
     try:
         amount = int(amount)
@@ -82,29 +83,38 @@ def admin_plus_gold(request):
     if amount <= 0:
         return Response({"error": "Parametr 'amount' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
 
-    gold_plus(user=hrac, amount=amount) # zavoláme funkci z economy.py, která přidá zlato hráči
+    # Funkce gold_plus z economy.py si už sama hráče v databázi vyhledá.
+    # Stačí jí předat 'user' a vyhodnotit, jestli vrátila True nebo False.
+    uspech = gold_plus(user=user, amount=amount) 
+    
+    if not uspech:
+        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
 
-    return Response({"message": f"Úspěšně odesláno: {amount} zlata pro hráče {hrac.username}"}, status=status.HTTP_200_OK)
+    return Response({"message": f"Úspěšně odesláno: {amount} zlata pro hráče {user.username}"}, status=status.HTTP_200_OK)
 
+
+# ADMIN - PŘIDÁVÁNÍ XP
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def admin_plus_xp(request):
     print("Funkce admin_plus_xp byla zavolána!")
-    hrac = request.user 
-    mnozstvi = request.data.get('mnozstvi') # Frontend (Kivy) posílá parametr 'mnozstvi'
+    user = request.user 
+    amount = request.data.get('amount') 
 
     try:
-        mnozstvi = int(mnozstvi)
+        amount = int(amount)
     except (TypeError, ValueError):
-        return Response({"error": "Parametr 'mnozstvi' musí být celé číslo"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Parametr 'amount' musí být celé číslo"}, status=status.HTTP_400_BAD_REQUEST)
 
-    if mnozstvi <= 0:
-        return Response({"error": "Parametr 'mnozstvi' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
+    if amount <= 0:
+        return Response({"error": "Parametr 'amount' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Najdeme profil hráče podle jména, pokud chybí tak ho vytvoříme
-    profil, _ = Player_info.objects.get_or_create(username=hrac)
+    # OPRAVA: Filtrujeme přes 'user' (objekt), ne přes 'user.username' (text)
+    player = Player_info.objects.filter(username=user).first()
+    if not player:
+        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Zavoláme tvoji připravenou funkci z lvl_xp_def.py
-    xp_plus(player_info=profil, xp_amount=mnozstvi)
+    # OPRAVA: Tvá funkce xp_plus očekává parametr, který se jmenuje 'player_info'
+    xp_plus(player_info=player, xp_amount=amount)
 
-    return Response({"message": f"Úspěšně odesláno: {mnozstvi} XP pro hráče {hrac.username}"}, status=status.HTTP_200_OK)
+    return Response({"message": f"Úspěšně odesláno: {amount} XP pro hráče {user.username}"}, status=status.HTTP_200_OK)
