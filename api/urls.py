@@ -6,4 +6,6 @@ urlpatterns = [
     path('login/', views.login_view, name='login'), #custome přihlášneí
     path('admin_plus_gold/', views.admin_plus_gold, name='admin_plus_gold'),
     path('admin_plus_xp/', views.admin_plus_xp, name='admin_plus_xp'),
+    path('profile/', views.get_player_profile, name='player_profile'),
+    path('add_atr/', views.add_atr, name='add_atr'),
 ]

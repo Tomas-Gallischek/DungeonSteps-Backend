@@ -15,6 +15,127 @@ from profile_app.models import Player_info
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
+from profile_app.atributs import atr_up
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_player_profile(request):
+    user = request.user
+    player = Player_info.objects.filter(username=user).first()
+    
+    if not player:
+        return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+        
+    return Response({
+        
+        # base info
+        "username": user.username,
+        "lvl": player.lvl,
+        "xp": player.xp,
+        "gold": player.gold,
+        
+        # atributes
+        "str_max": player.str_max,
+        "dex_max": player.dex_max,
+        "int_max": player.int_max,
+        "vit_max": player.vit_max,
+        "luck_max": player.luck_max,
+        
+        # points
+        "atr_points": player.atr_points,   
+        "skill_points": player.skill_points
+        
+        
+    }, status=status.HTTP_200_OK)
+
+
+
+
+# ZVYŠOVÁNÍ STATŮ
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_atr(request):
+    user = request.user
+    player = Player_info.objects.filter(username=user).first()
+    
+    if not player:
+        return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+    atr_name = request.data.get('atr')
+    
+    if atr_name not in ['str', 'dex', 'int', 'vit', 'luck']:
+        return Response({"error": "Neplatný název stat"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if player.atr_points <= 0:
+        return Response({"error": "Nedostatek atributových bodů"}, status=status.HTTP_400_BAD_REQUEST)
+  
+    # FUNKCE PRO ZVÝŠENÍ ATRIBUTŮ
+    atr_up(user=user, atr_name=atr_name)
+    
+
+    
+    return Response({"message": f"Úspěšně zvýšen {atr_name} na {getattr(player, f'{atr_name}_stats')}"}, status=status.HTTP_200_OK)
+
+
+
+
+
+
+
+
+
+# ADMIN - PŘIDÁVÁNÍ GOLDŮ
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_plus_gold(request):
+    print("Funkce admin_plus_gold byla zavolána!")
+    user = request.user # Django User objekt
+    amount = request.data.get('amount') 
+
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return Response({"error": "Parametr 'amount' musí být celé číslo"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if amount <= 0:
+        return Response({"error": "Parametr 'amount' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Funkce gold_plus z economy.py si už sama hráče v databázi vyhledá.
+    # Stačí jí předat 'user' a vyhodnotit, jestli vrátila True nebo False.
+    uspech = gold_plus(user=user, amount=amount) 
+    
+    if not uspech:
+        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response({"message": f"Úspěšně odesláno: {amount} zlata pro hráče {user.username}"}, status=status.HTTP_200_OK)
+
+
+# ADMIN - PŘIDÁVÁNÍ XP
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_plus_xp(request):
+    print("Funkce admin_plus_xp byla zavolána!")
+    user = request.user 
+    amount = request.data.get('amount') 
+
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return Response({"error": "Parametr 'amount' musí být celé číslo"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if amount <= 0:
+        return Response({"error": "Parametr 'amount' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
+
+    player = Player_info.objects.filter(username=user).first()
+    if not player:
+        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
+
+    xp_plus(user=user, xp_amount=amount)
+
+    return Response({"message": f"Úspěšně odesláno: {amount} XP pro hráče {user.username}"}, status=status.HTTP_200_OK)
+
+
 
 
 # REGISTRACE UŽIVATELE
@@ -67,54 +188,3 @@ def login_view(request):
 
 
 
-# ADMIN - PŘIDÁVÁNÍ GOLDŮ
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def admin_plus_gold(request):
-    print("Funkce admin_plus_gold byla zavolána!")
-    user = request.user # Django User objekt
-    amount = request.data.get('amount') 
-
-    try:
-        amount = int(amount)
-    except (TypeError, ValueError):
-        return Response({"error": "Parametr 'amount' musí být celé číslo"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if amount <= 0:
-        return Response({"error": "Parametr 'amount' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Funkce gold_plus z economy.py si už sama hráče v databázi vyhledá.
-    # Stačí jí předat 'user' a vyhodnotit, jestli vrátila True nebo False.
-    uspech = gold_plus(user=user, amount=amount) 
-    
-    if not uspech:
-        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
-
-    return Response({"message": f"Úspěšně odesláno: {amount} zlata pro hráče {user.username}"}, status=status.HTTP_200_OK)
-
-
-# ADMIN - PŘIDÁVÁNÍ XP
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def admin_plus_xp(request):
-    print("Funkce admin_plus_xp byla zavolána!")
-    user = request.user 
-    amount = request.data.get('amount') 
-
-    try:
-        amount = int(amount)
-    except (TypeError, ValueError):
-        return Response({"error": "Parametr 'amount' musí být celé číslo"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if amount <= 0:
-        return Response({"error": "Parametr 'amount' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
-
-    # OPRAVA: Filtrujeme přes 'user' (objekt), ne přes 'user.username' (text)
-    player = Player_info.objects.filter(username=user).first()
-    if not player:
-        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
-
-    # OPRAVA: Tvá funkce xp_plus očekává parametr, který se jmenuje 'player_info'
-    xp_plus(user=user, xp_amount=amount)
-
-    return Response({"message": f"Úspěšně odesláno: {amount} XP pro hráče {user.username}"}, status=status.HTTP_200_OK)

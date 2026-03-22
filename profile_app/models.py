@@ -8,9 +8,13 @@ class Player_info(models.Model):
     username = models.OneToOneField('auth.User', on_delete=models.CASCADE)
     lvl = models.IntegerField(default=1, validators=[MinValueValidator(1)])
     xp = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    xp_next_lvl = models.IntegerField(default=100, validators=[MinValueValidator(1)])
+    xp_next_lvl = models.IntegerField(default=8000, validators=[MinValueValidator(1)])
     gold = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    
+
+# POINTS
+    atr_points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    skill_points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+
 # KROKY
     steps = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     steps_today = models.IntegerField(default=0, validators=[MinValueValidator(0)])
