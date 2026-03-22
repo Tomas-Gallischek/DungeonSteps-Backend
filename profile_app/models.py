@@ -4,8 +4,22 @@ from django.core.validators import MinValueValidator
 
 class Player_info(models.Model):
     
+    ROLE_CHOICES = [
+        ('warrior', 'Válečník'),
+        ('mage', 'Mág'),
+        ('hunter', 'Hraničář'),
+    ]
+    
+    GENDER_CHOICES = [
+        ('male', 'Muž'),
+        ('female', 'Žena'),
+        ('other', 'Jiné'),
+    ]
+    
 # ZÁKLADNÍ INFORMACE
     username = models.OneToOneField('auth.User', on_delete=models.CASCADE)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default=None, null=True, blank=True)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=None, null=True, blank=True)
     lvl = models.IntegerField(default=1, validators=[MinValueValidator(1)])
     xp = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     xp_next_lvl = models.IntegerField(default=8000, validators=[MinValueValidator(1)])

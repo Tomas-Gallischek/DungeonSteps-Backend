@@ -15,7 +15,7 @@ from profile_app.models import Player_info
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
-from profile_app.atributs import atr_up
+from profile_app.atributs import atr_up, atr_role_default
 
 
 @api_view(['GET'])
@@ -145,6 +145,26 @@ def registrace(request):
     username = request.data.get('username')
     password = request.data.get('password')
     email = request.data.get('email', '')
+    gender = request.data.get('gender')
+    role = request.data.get('role') 
+ 
+ 
+# convertování hodnot z frontendu na hodnoty pro databázi
+    if gender == 'Muž':
+        gender = 'male'
+    elif gender == 'Žena':
+        gender = 'female'
+    else:
+        gender = 'other'
+        
+    if role == 'Válečník':
+        role = 'warrior'
+    elif role == 'Mág':
+        role = 'mage'
+    elif role == 'Hraničář':
+        role = 'hunter'
+    
+
 
     if not username or not password:
         return Response({"error": "Chybí jméno nebo heslo"}, status=status.HTTP_400_BAD_REQUEST)
@@ -157,6 +177,21 @@ def registrace(request):
     
     # Vytvoření profilu hráče
     Player_info.objects.create(username=user)
+    
+    # přiřazení pohlaví do profilu
+    player = Player_info.objects.filter(username=user).first()
+    player.gender = gender
+    player.role = role
+    player.save()
+
+    # Přiřazení základních atributů podle role
+    atr_role_default(user=user, role=role)
+    
+    
+    
+    
+    return Response({"message": f"Registrace proběhla úspěšně: Jméno: {username}, Role: {role}, Pohlaví: {gender}"}, status=status.HTTP_201_CREATED)
+
     
     
     # Vytvoření tokenu pro okamžité přihlášení po registraci
