@@ -7,61 +7,41 @@ from django.utils import timezone
 from .models import fight_log
 
 def fight(player, enemy_init_name):
-    print("Funkce fight byla zavolána!")
-    
-    # INICIALIZACE
     turn_logs = []
-    
-    # Získání modelů (jméno proměnné v argumentu změněno na player_username pro přehlednost)
     player = Player_info.objects.filter(username=player).first()
     enemy = Enemy.objects.filter(init_name=enemy_init_name).first()
-    
     time_start = timezone.now()
     print(f"Čas zahájení souboje: {time_start}")
     
     if not player or not enemy:
         return Response({"error": "Player or Enemy not found."}, status=status.HTTP_404_NOT_FOUND)
-    
-    # NASTAVENÍ HP:
+
     p_actual_hp = player.hp_max
     e_actual_hp = enemy.hp
-
-    # NASTAVENÍ RYCHLOSTÍ (převod na float pro jistotu)
     p_speed = float(player.attack_speed)
     e_speed = float(enemy.attack_speed)
     
-    # Kdy proběhne první útok? Za čas odpovídající rychlosti zbraně
+    # Kdy proběhne první útok?
     p_next_attack = p_speed
     e_next_attack = e_speed
 
-    # SOUBOJ NA ČASOVÉ OSE
+    # --- SOUBOJ ---
     while e_actual_hp > 0 and p_actual_hp > 0:
-        
-        # Posuneme se v čase k nejbližší události (kdo je na řadě?)
         current_time = min(p_next_attack, e_next_attack)
         
         # --- HRÁČ ÚTOČÍ ---
         if current_time == p_next_attack:
-            # random.randint(a, b) zahrnuje i obě krajní hodnoty, nahrazuje choice(range)
             p_base_dmg = random.randint(player.dmg_min, player.dmg_max)
             p_damage_dealt = max(0, p_base_dmg - enemy.armor)
             
+        # --- ÚTOČNÉ FUNKCE --- 
+            p_damage_dealt, p_damage_status = critical_hit(player.crit_chance, player.crit_multiplier, p_damage_dealt)
+            
+        
+        # --- KONEC ZÁPASU A ZÁPIS DO DATABÁZE ---
             e_actual_hp -= p_damage_dealt
-            
-            turn_logs.append({
-                "time_offset": round(current_time, 2), # Relativní čas (např. 1.2)
-                "attacker": str(player.username),
-                "defender": str(enemy.name),
-                "damage": p_damage_dealt, # Ukládáme jako Int
-                "defender_hp": max(0, e_actual_hp), # Aktuální HP po zásahu
-                "attacker_hp": p_actual_hp # Aktuální HP hráče pro případ, že by se změnily v průběhu souboje (např. léčení) - pro přehlednost logu
-            })
-            
-            print(f"[{current_time:.2f}s] {player.username} attacks {enemy.name} for {p_damage_dealt} damage. Enemy HP left: {e_actual_hp}")
-            
-            # Hráč zaútočil, naplánujeme jeho další útok
+            get_fight_logs(current_time, enemy.name, player.username, e_actual_hp, p_actual_hp, p_damage_dealt, turn_logs, p_damage_status) 
             p_next_attack += p_speed
-            
             if e_actual_hp <= 0:
                 winner = player.username
                 print(f"{player.username} has defeated {enemy.name}!")
@@ -72,22 +52,14 @@ def fight(player, enemy_init_name):
             e_base_dmg = random.randint(enemy.dmg_min, enemy.dmg_max)
             e_damage_dealt = max(0, e_base_dmg - player.armor)
             
+        # --- ÚTOČNÉ FUNKCE --- 
+            e_damage_dealt, e_damage_status = critical_hit(enemy.crit_chance, enemy.crit_multiplier, e_damage_dealt)
+            
+            
+        # --- KONEC ZÁPASU A ZÁPIS DO DATABÁZE ---
             p_actual_hp -= e_damage_dealt
-            
-            turn_logs.append({
-                "time_offset": round(current_time, 2),
-                "attacker": str(enemy.name),
-                "defender": str(player.username),
-                "damage": e_damage_dealt,
-                "defender_hp": max(0, p_actual_hp),
-                "attacker_hp": e_actual_hp
-            })
-            
-            print(f"[{current_time:.2f}s] {enemy.name} attacks {player.username} for {e_damage_dealt} damage. Player HP left: {p_actual_hp}")
-            
-            # Nepřítel zaútočil, naplánujeme jeho další útok
+            get_fight_logs(current_time, player.username, enemy.name, p_actual_hp, e_actual_hp, e_damage_dealt, turn_logs, e_damage_status) 
             e_next_attack += e_speed
-            
             if p_actual_hp <= 0:
                 winner = enemy.name
                 print(f"{enemy.name} has defeated {player.username}!")
@@ -108,3 +80,32 @@ def fight(player, enemy_init_name):
     result = winner
     
     return result
+
+
+def get_fight_logs(current_time, defender, attacker, defender_actual_hp, attacker_actual_hp, damage_dealt, turn_logs, damage_status):
+
+        print(f"Čas: {current_time:.2f}s | Útočník: {attacker} | Obránce: {defender} | Poškození: {damage_dealt} ({damage_status}) | HP obránce: {defender_actual_hp} | HP útočníka: {attacker_actual_hp}")
+
+        turn_logs.append({
+        "time_offset": round(current_time, 2),
+        "attacker": str(attacker),
+        "defender": str(defender),
+        "damage": damage_dealt,
+        "damage_status": damage_status,
+        "defender_hp": max(0, defender_actual_hp),
+        "attacker_hp": max(0, attacker_actual_hp)
+    })
+        
+    
+        
+def critical_hit(chance, multiplayer, dmg):
+    
+    critic_roll = random.randint(1, 100)
+    if critic_roll <= chance:
+        dmg = int(dmg * multiplayer)
+        dmg_status = "critical"
+        return dmg, dmg_status
+    else:
+        dmg = int(dmg)
+        dmg_status = "normal"
+        return dmg, dmg_status

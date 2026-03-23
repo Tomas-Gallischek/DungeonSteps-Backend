@@ -2,8 +2,6 @@ from .models import Player_info, Player_Items
 
 
 def hp_update(player, update_type):
-    
-    
 # POKUD ZVYŠUJEME HP ZA LVL
     if update_type == 'lvl_up':
         hp_koef = player.hp_lvl_koef
@@ -76,19 +74,33 @@ def atr_up(user, updates):
         atr_name = atr_name.lower()
         
         if atr_name == 'str':
-            player.str_stats += amount
+            for i in range(amount):
+                player.str_stats += 1
+
+                
         elif atr_name == 'dex':
-            player.dex_stats += amount
+            for i in range(amount):
+                player.dex_stats += 1
+
+                
         elif atr_name == 'int':
-            player.int_stats += amount
+            for i in range(amount):
+                player.int_stats += 1
+
+                
+                
         elif atr_name == 'luck':
-            player.luck_stats += amount
-            
+            for i in range(amount):
+                player.luck_stats += 1
+                crit_update(player=player, update_type='luck_change')
+
+                
         elif atr_name == 'vit':
             for _ in range(amount):
                 player.vit_stats += 1
-                player.vit_max += 1 
+                player.vit_max += 1 # <-- Pracovní hodnota kvůlui aktualizaci HP z vitality, která se bude přičítat k max HP
                 hp_update(player=player, update_type='atr_change')
+
                 
         else:
             continue
@@ -101,6 +113,12 @@ def atr_up(user, updates):
             
         # Přepočet max statů na konci
         atr_max_update(user_name)
+        
+        # Přepočet odolností na konci (kvůli aktuálnosti hodnot)
+        atr_resist_update(player, atr_name)
+        
+        # Přepočet poškození na konci (kvůli aktuálnosti hodnot)
+        dmg_update(player.username)
         
     return True
 
@@ -120,8 +138,6 @@ def atr_max_update(player):
         eqp_value = getattr(user, f"{atr}_eqp")
         max_value = base_value + stats_value + eqp_value
         setattr(user, f"{atr}_max", max_value)
-        
-    # Uložíme všechny změněné atributy do databáze najednou
     user.save()
     
     # Ukončíme funkci až poté, co cyklus proběhne pro všechny atributy
@@ -160,8 +176,6 @@ def atr_role_default(user, role):
 def dmg_update(player):
     player = Player_info.objects.filter(username=player).first()
     weapon = Player_Items.objects.filter(player=player, category='weapon', item_status='equipped').first()
-    
-    
     print(f"DEBUG: NASAZENÁ ZRAŇ: {weapon.name}" if weapon else "ŽÁDNÁ ZBRAŇ NENÍ NASAZENÁ")
     
     if not player:
@@ -178,6 +192,7 @@ def dmg_update(player):
         elif weapon.dmg_type == 'magic':
             dmg_atr_value = player.int_max
             dmg_atr = 'int'
+            
     elif not weapon:
         no_weapon_base_dmg = player.lvl
         no_weapon_dmg_min = no_weapon_base_dmg * 0.8
@@ -215,3 +230,33 @@ def dmg_update(player):
     
     player.save()
     return True
+
+
+def crit_update(player, update_type):
+    if update_type == 'luck_change':
+        player.crit_chance = (player.luck_stats // player.lvl)
+        if player.crit_chance > 50:
+            player.crit_chance = 50
+        player.save()
+        
+        
+def atr_resist_update(player, atr):
+    print(f"DEBUG: Funkce atr_resist_update byla zavolána pro hráče: {player.username} a atribut: {atr}")
+    
+    if atr == 'str':
+        resist = round((player.str_max // player.lvl), 2)
+        if resist > 50:
+            resist = 50
+        player.str_resist = resist
+        
+    elif atr == 'dex':
+        resist = round((player.dex_max // player.lvl), 2)
+        if resist > 50:
+            resist = 50
+        player.dex_resist = resist
+    elif atr == 'int':
+        resist = round((player.int_max // player.lvl), 2)
+        if resist > 50:
+            resist = 50
+        player.int_resist = resist
+    player.save()

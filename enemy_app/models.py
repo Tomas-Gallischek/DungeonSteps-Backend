@@ -28,8 +28,8 @@ class Enemy(models.Model):
     dmg_min = models.IntegerField(blank=True, null=True)
     dmg_max = models.IntegerField(blank=True, null=True)
     attack_speed = models.FloatField(blank=True, null=True)
-    critical_chance = models.FloatField(blank=True, null=True)
-    critical_multiplier = models.FloatField(blank=True, null=True)
+    crit_chance = models.FloatField(default = 0,blank=True, null=True)
+    crit_multiplier = models.FloatField(default = 1,blank=True, null=True)
     
 # OSTATNÍ
     loot = models.JSONField(blank=True, null=True)

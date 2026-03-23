@@ -72,19 +72,18 @@ class Player_info(models.Model):
     luck_max = models.IntegerField(default=1, blank=True)
     
 # BOJ
-
     dmg_base = models.IntegerField(default=1, blank=True) # <-- Základní poškození, které se bude upravovat podle atributů a vybavení
     dmg_avg = models.IntegerField(default=2, blank=True)
     dmg_min = models.IntegerField(default=1, blank=True)
     dmg_max = models.IntegerField(default=3, blank=True)
-    
-    hp_actual = models.IntegerField(default=1, blank=True) # <-- Aktuální HP, které se mění během boje, ale neovlivňuje max HP
-    
     attack_speed = models.FloatField(default=1, blank=True)
-    defence_number = models.IntegerField(default=1, blank=True)   
     crit_chance = models.FloatField(default=0, blank=True)
     crit_multiplier = models.FloatField(default=1.5, blank=True) 
     
+    hp_actual = models.IntegerField(default=1, blank=True) # <-- Aktuální HP, které se mění během boje, ale neovlivňuje max HP
+    dex_resist = models.FloatField(default=0, blank=True, validators=[MaxValueValidator(50)]) # <-- Odolnost proti poškození založenému na obratnosti, která se bude počítat z atributů a vybavení
+    int_resist = models.FloatField(default=0, blank=True, validators=[MaxValueValidator(50)]) # <-- Odolnost proti poškození založenému na inteligenci, která se bude počítat z atributů a vybavení
+    str_resist = models.FloatField(default=0, blank=True, validators=[MaxValueValidator(50)]) # <-- Odolnost proti poškození založenému na síle, která se bude počítat z atributů a vybavení
 # EQP
     weapon = models.BooleanField(("Weapon Equipped"), default=False,)
     armor = models.BooleanField(("Armor Equipped"), default=False,)
