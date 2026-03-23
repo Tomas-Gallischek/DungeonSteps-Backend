@@ -17,25 +17,24 @@ from item_app.models import Item_default
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
-from profile_app.atributs import atr_up, atr_role_default, hp_update, dmg_update
+from profile_app.atributs import atr_up, atr_role_default, hp_update, dmg_update, armor_update
 from item_app.item_generator import item_generator_all
 from fight_app.fight import fight
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_player_profile(request):
-    
+def get_player_profile(request):    
     user = request.user
     player = Player_info.objects.filter(username=user).first()
     all_items = Player_Items.objects.all().filter(player=player)  # Získáme všechny položky patřící hráči
     
-    print(f"DEBUG: HP hráče {user.username} je {player.hp_max}")  # Debug výpis HP hráče
+    UPDATE(user)
     
     if not player:
         return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
     
-    dmg_update(player=user)
+
         
     return Response({
         
@@ -83,9 +82,6 @@ def get_player_profile(request):
             "item_bonus": item.item_bonus,
         } for item in all_items],
         
-        # EQP
-        "weapon_equipped": player.weapon,
-        "armor_equipped": player.armor,
 
         
     }, status=status.HTTP_200_OK)
@@ -95,7 +91,6 @@ def get_player_profile(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def init_fight(request):
-    print("Funkce init_fight byla zavolána!")
     
 # NAČTENÍ DAT Z FRONTENDU
     user = request.user
@@ -111,7 +106,7 @@ def init_fight(request):
         return Response({"error": "Nepřítel nenalezen"}, status=status.HTTP_404_NOT_FOUND)
     
 # AKTUALIZACE STATŮ:
-    dmg_update(player=user)     
+    UPDATE(user)
     
 # ZAVOLÁNÍ FUNKCE PRO SOUBOJ
     result = fight(player=user, enemy_init_name=enemy_init_name)
@@ -162,7 +157,7 @@ def add_atr(request):
     player.refresh_from_db()
     
     # aktualizace DMG po změně atributů
-    dmg_update(player=user)
+    UPDATE(user)
     
     return Response({"message": f"Úspěšně rozděleno {total_requested_points} bodů."}, status=status.HTTP_200_OK)
 
@@ -240,7 +235,7 @@ def admin_random_item(request):
     item_generator_all(user=user, item_status=item_status, item_base_id=random_item.item_base_id)
     
     # aktualizace DMG po přidání nové zbraně do inventáře
-    dmg_update(player=user)
+
 
     return Response({"message": f"Náhodná věc úspěšně vygenerována pro hráče {user.username}"}, status=status.HTTP_200_OK)
 
@@ -254,48 +249,26 @@ def toggle_equip(request):
     item_name = request.data.get('item_name')
     new_status = request.data.get('new_status')
     item_id = request.data.get('item_id')
+    player = Player_info.objects.filter(username=user).first()
+    item = Player_Items.objects.filter(item_id=item_id).first()
 
     if new_status not in ['equipped', 'inventory']:
         return Response({"error": "Neplatný status položky"}, status=status.HTTP_400_BAD_REQUEST)
         
-
-    player = Player_info.objects.filter(username=user).first()
     if not player:
         return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
-    
-    item = Player_Items.objects.filter(item_id=item_id).first()
     
     if not item:
         return Response({"error": "Položka nebyla nalezena"}, status=status.HTTP_404_NOT_FOUND)
     
-    
-# USPĚŠNÉ NASAZENÍ / SUNDÁNÍ
-    else:
-        if new_status == 'equipped':
-            if item.category == 'weapon' and player.weapon:
-                return Response({"error": "Již máte vybavenou zbraň"}, status=status.HTTP_400_BAD_REQUEST)
-            if item.category == 'armor' and player.armor:
-                return Response({"error": "Již máte vybavenou zbroj"}, status=status.HTTP_400_BAD_REQUEST)
-            if item.category == 'weapon':
-                player.weapon = True
-            if item.category == 'armor':
-                player.armor = True
-        elif new_status == 'inventory':
-            if item.category == 'weapon':
-                player.weapon = False
-            if item.category == 'armor':
-                player.armor = False
             
-        item.item_status = new_status
-        item.save()
-        
-    # aktualizace DMG po změně vybavení
-        dmg_update(player=user)
-        player.save()
+    item.item_status = new_status
+    item.save()
+    
+    UPDATE(user)
         
 
-    
-        return Response({"message": f"Status položky '{item_name}' úspěšně změněn na '{new_status}'"}, status=status.HTTP_200_OK)
+    return Response({"message": f"Status položky '{item_name}' úspěšně změněn na '{new_status}'"}, status=status.HTTP_200_OK)
     
     
 
@@ -359,7 +332,7 @@ def registrace(request):
         item_generator_all(user=user, item_status="inventory", item_base_id=i)
     
     # přiřazení základních atributů podle role a aktualizace HP
-    dmg_update(player=user)
+
     
     return Response({"message": f"Registrace proběhla úspěšně: Jméno: {username}, Role: {role}, Pohlaví: {gender}"}, status=status.HTTP_201_CREATED)
 
@@ -394,3 +367,9 @@ def login_view(request):
 
 
 
+def UPDATE(user):
+    print("AKTUALIZACE STATŮ PROBÍHÁ... ")
+    dmg_update(user)
+    armor_update(user)
+    
+    return True

@@ -108,23 +108,23 @@ def atr_up(user, updates):
         total_spent += amount
     
     if total_spent > 0:
-        player.atr_points -= total_spent
-        player.save()
+            player.atr_points -= total_spent
+            player.save()
+
+            atr_max_update(user_name)
+            player.refresh_from_db()
             
-        # Přepočet max statů na konci
-        atr_max_update(user_name)
-        
-        # Přepočet odolností na konci (kvůli aktuálnosti hodnot)
-        atr_resist_update(player, atr_name)
-        
-        # Přepočet poškození na konci (kvůli aktuálnosti hodnot)
-        dmg_update(player.username)
-        
+            for changed_atr, amount in updates.items():
+                if amount > 0:
+                    atr_resist_update(player, changed_atr)
+            
+
+            dmg_update(user)
+            
     return True
 
 
 def atr_max_update(player):
-    print(f"DEBUG: Funkce atr_max_update byla zavolána pro hráče: {player}")
     user = Player_info.objects.filter(username=player).first()
     
     if not user:
@@ -173,16 +173,14 @@ def atr_role_default(user, role):
     atr_max_update(player=user)
         
         
-def dmg_update(player):
-    player = Player_info.objects.filter(username=player).first()
+def dmg_update(user):
+    player = Player_info.objects.filter(username=user).first()
     weapon = Player_Items.objects.filter(player=player, category='weapon', item_status='equipped').first()
-    print(f"DEBUG: NASAZENÁ ZRAŇ: {weapon.name}" if weapon else "ŽÁDNÁ ZBRAŇ NENÍ NASAZENÁ")
     
     if not player:
         return False # Pro jistotu, kdyby se hráč nenašel
 
     if weapon:
-        print(f"DEBUG: Zbraň '{weapon.name}' má typ poškození: {weapon.dmg_type}")
         if weapon.dmg_type == 'light':
             dmg_atr_value = player.dex_max
             dmg_atr = 'dex'
@@ -219,9 +217,6 @@ def dmg_update(player):
 
     random_dmg_list = []
     random_dmg_list.clear()  # Vyčistíme předchozí hodnoty, pokud nějaké jsou
-            
-        
-    print(f"DEBUG: Vypočítané hodnoty pro hráče {player.username} - dmg_atr: {dmg_atr}, dmg_atr_value: {dmg_atr_value}, dmg_base: {dmg_base}, dmg_min: {dmg_min}, dmg_max: {dmg_max}, dmg_avg: {dmg_avg}")
     
     player.dmg_base = int(dmg_base)
     player.dmg_min = int(dmg_min)
@@ -240,9 +235,7 @@ def crit_update(player, update_type):
         player.save()
         
         
-def atr_resist_update(player, atr):
-    print(f"DEBUG: Funkce atr_resist_update byla zavolána pro hráče: {player.username} a atribut: {atr}")
-    
+def atr_resist_update(player, atr):    
     if atr == 'str':
         resist = round((player.str_max // player.lvl), 2)
         if resist > 50:
@@ -260,3 +253,19 @@ def atr_resist_update(player, atr):
             resist = 50
         player.int_resist = resist
     player.save()
+    
+    
+def armor_update(user):
+    player = Player_info.objects.filter(username=user).first()
+    armor = 1
+    armor_eqp = Player_Items.objects.filter(player=player, category='armor', item_status='equipped').first() or None
+    
+    if armor_eqp:
+        player.armor = armor_eqp.armor
+        player.save()
+    else:
+        player.armor = armor
+        player.save()    
+    
+    player.refresh_from_db()
+    return True

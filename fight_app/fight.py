@@ -29,14 +29,27 @@ def fight(player, enemy_init_name):
     while e_actual_hp > 0 and p_actual_hp > 0:
         current_time = min(p_next_attack, e_next_attack)
         
-        # --- HRÁČ ÚTOČÍ ---
+        # --- HRÁČ ---
+        
+        # --- ÚTOK ---
         if current_time == p_next_attack:
-            p_base_dmg = random.randint(player.dmg_min, player.dmg_max)
-            p_damage_dealt = max(0, p_base_dmg - enemy.armor)
+            p_dmg = random.randint(player.dmg_min, player.dmg_max)
+            p_dmg, p_damage_status = critical_hit(player.crit_chance, player.crit_multiplier, p_dmg)
+        
+        # --- OBRANA ---
+            armor = enemy.armor
+            if player.dmg_atr == "str":
+                resist_value = enemy.str_resist
+            elif player.dmg_atr == "dex":
+                resist_value = enemy.dex_resist
+            elif player.dmg_atr == "int":
+                resist_value = enemy.int_resist
+            else:
+                resist_value = 0
+            armor = resist(armor, resist_value)
             
-        # --- ÚTOČNÉ FUNKCE --- 
-            p_damage_dealt, p_damage_status = critical_hit(player.crit_chance, player.crit_multiplier, p_damage_dealt)
-            
+        # --- SOUČET ---
+            p_damage_dealt = max(0, p_dmg - armor)
         
         # --- KONEC ZÁPASU A ZÁPIS DO DATABÁZE ---
             e_actual_hp -= p_damage_dealt
@@ -47,15 +60,29 @@ def fight(player, enemy_init_name):
                 print(f"{player.username} has defeated {enemy.name}!")
                 break
 
-        # --- NEPŘÍTEL ÚTOČÍ ---
+        # --- ENEMY ---
+        
+        # --- ÚTOK---
         if current_time == e_next_attack:
-            e_base_dmg = random.randint(enemy.dmg_min, enemy.dmg_max)
-            e_damage_dealt = max(0, e_base_dmg - player.armor)
+            e_dmg = random.randint(enemy.dmg_min, enemy.dmg_max)
+            e_dmg, e_damage_status = critical_hit(enemy.crit_chance, enemy.crit_multiplier, e_dmg)
             
-        # --- ÚTOČNÉ FUNKCE --- 
-            e_damage_dealt, e_damage_status = critical_hit(enemy.crit_chance, enemy.crit_multiplier, e_damage_dealt)
+        # --- OBRANA ---
+            armor = player.armor
+            if enemy.dmg_atr == "str":
+                resist_value = player.str_resist
+            elif enemy.dmg_atr == "dex":
+                resist_value = player.dex_resist
+            elif enemy.dmg_atr == "int":
+                resist_value = player.int_resist
+            else:
+                resist_value = 0
+            armor = resist(armor, resist_value)
+        
+        # --- SOUČET ---
+            e_damage_dealt = max(0, e_dmg - armor)
             
-            
+        
         # --- KONEC ZÁPASU A ZÁPIS DO DATABÁZE ---
             p_actual_hp -= e_damage_dealt
             get_fight_logs(current_time, player.username, enemy.name, p_actual_hp, e_actual_hp, e_damage_dealt, turn_logs, e_damage_status) 
@@ -109,3 +136,10 @@ def critical_hit(chance, multiplayer, dmg):
         dmg = int(dmg)
         dmg_status = "normal"
         return dmg, dmg_status
+    
+def resist(armor, resist_value):
+    resist = armor * (resist_value / 10)
+    armor += int(resist)
+    return armor
+    
+    
