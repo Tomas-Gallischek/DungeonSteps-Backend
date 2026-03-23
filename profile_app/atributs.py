@@ -1,4 +1,4 @@
-from .models import Player_info
+from .models import Player_info, Player_Items
 
 
 def hp_update(player, update_type):
@@ -156,3 +156,62 @@ def atr_role_default(user, role):
         
     atr_max_update(player=user)
         
+        
+def dmg_update(player):
+    player = Player_info.objects.filter(username=player).first()
+    weapon = Player_Items.objects.filter(player=player, category='weapon', item_status='equipped').first()
+    
+    
+    print(f"DEBUG: NASAZENÁ ZRAŇ: {weapon.name}" if weapon else "ŽÁDNÁ ZBRAŇ NENÍ NASAZENÁ")
+    
+    if not player:
+        return False # Pro jistotu, kdyby se hráč nenašel
+
+    if weapon:
+        print(f"DEBUG: Zbraň '{weapon.name}' má typ poškození: {weapon.dmg_type}")
+        if weapon.dmg_type == 'light':
+            dmg_atr_value = player.dex_max
+            dmg_atr = 'dex'
+        elif weapon.dmg_type == 'heavy':
+            dmg_atr_value = player.str_max
+            dmg_atr = 'str'
+        elif weapon.dmg_type == 'magic':
+            dmg_atr_value = player.int_max
+            dmg_atr = 'int'
+    elif not weapon:
+        no_weapon_base_dmg = player.lvl
+        no_weapon_dmg_min = no_weapon_base_dmg * 0.8
+        no_weapon_dmg_max = no_weapon_base_dmg * 1.2
+        dmg_atr_value = 1
+        dmg_atr = 'none'
+    else:
+        no_weapon_base_dmg = player.lvl
+        no_weapon_dmg_min = no_weapon_base_dmg * 0.8
+        no_weapon_dmg_max = no_weapon_base_dmg * 1.2
+        dmg_atr_value = 1
+        dmg_atr = 'none'
+
+        
+    player.dmg_atr = dmg_atr
+    player.dmg_atr_value = dmg_atr_value
+    
+    
+    dmg_base = dmg_atr_value + weapon.dmg_avg if weapon else no_weapon_base_dmg  # Základní poškození se počítá z atributu a zbraně, pokud je vybavená, jinak z úrovně
+    dmg_min = (dmg_base * weapon.dmg_min) if weapon else no_weapon_dmg_min  # Minimální poškození se počítá z základního poškození a zbraně, pokud je vybavená, jinak z úrovně
+    dmg_max = (dmg_base * weapon.dmg_max) if weapon else no_weapon_dmg_max  # Maximální poškození se počítá z základního poškození a zbraně, pokud je vybavená, jinak z úrovně
+    dmg_avg = (dmg_min + dmg_max) // 2
+    
+
+    random_dmg_list = []
+    random_dmg_list.clear()  # Vyčistíme předchozí hodnoty, pokud nějaké jsou
+            
+        
+    print(f"DEBUG: Vypočítané hodnoty pro hráče {player.username} - dmg_atr: {dmg_atr}, dmg_atr_value: {dmg_atr_value}, dmg_base: {dmg_base}, dmg_min: {dmg_min}, dmg_max: {dmg_max}, dmg_avg: {dmg_avg}")
+    
+    player.dmg_base = int(dmg_base)
+    player.dmg_min = int(dmg_min)
+    player.dmg_max = int(dmg_max)
+    player.dmg_avg = int(dmg_avg)
+    
+    player.save()
+    return True

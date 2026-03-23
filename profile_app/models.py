@@ -34,6 +34,9 @@ class Player_info(models.Model):
     steps_today = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     
 # ATRIBUTY
+    dmg_atr = models.CharField(max_length=20, default='none') # Typ poškození, který se bude počítat z atributů a vybavení, může být 'heavy', 'light', 'magic' nebo 'none'
+    dmg_atr_value = models.IntegerField(default=1, blank=True, null=True) # Hodnota atributu, který se bude počítat do poškození, může být str, dex nebo int, podle role a vybavení
+
     hp_base = models.IntegerField(default=0, blank=True)
     hp_stats = models.IntegerField(default=0, blank=True)
     hp_lvl = models.IntegerField(default=0, blank=True)
@@ -70,7 +73,13 @@ class Player_info(models.Model):
     
 # BOJ
 
-    attack_number = models.IntegerField(default=1, blank=True)
+    dmg_base = models.IntegerField(default=1, blank=True) # <-- Základní poškození, které se bude upravovat podle atributů a vybavení
+    dmg_avg = models.IntegerField(default=2, blank=True)
+    dmg_min = models.IntegerField(default=1, blank=True)
+    dmg_max = models.IntegerField(default=3, blank=True)
+    
+    hp_actual = models.IntegerField(default=1, blank=True) # <-- Aktuální HP, které se mění během boje, ale neovlivňuje max HP
+    
     attack_speed = models.FloatField(default=1, blank=True)
     defence_number = models.IntegerField(default=1, blank=True)   
     crit_chance = models.FloatField(default=0, blank=True)

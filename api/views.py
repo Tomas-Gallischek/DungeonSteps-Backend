@@ -17,7 +17,7 @@ from item_app.models import Item_default
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
-from profile_app.atributs import atr_up, atr_role_default, hp_update
+from profile_app.atributs import atr_up, atr_role_default, hp_update, dmg_update
 from item_app.item_generator import item_generator_all
 from fight_app.fight import fight
 
@@ -34,6 +34,8 @@ def get_player_profile(request):
     
     if not player:
         return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+    dmg_update(player=user)
         
     return Response({
         
@@ -108,6 +110,9 @@ def init_fight(request):
     if not enemy_init_name:
         return Response({"error": "Nepřítel nenalezen"}, status=status.HTTP_404_NOT_FOUND)
     
+# AKTUALIZACE STATŮ:
+    dmg_update(player=user)     
+    
 # ZAVOLÁNÍ FUNKCE PRO SOUBOJ
     result = fight(player=user, enemy_init_name=enemy_init_name)
     
@@ -155,6 +160,9 @@ def add_atr(request):
     
     # Volitelné: Načtení aktuálních dat pro přesnou zprávu
     player.refresh_from_db()
+    
+    # aktualizace DMG po změně atributů
+    dmg_update(player=user)
     
     return Response({"message": f"Úspěšně rozděleno {total_requested_points} bodů."}, status=status.HTTP_200_OK)
 
@@ -230,6 +238,9 @@ def admin_random_item(request):
     item_status = "inventory"
     
     item_generator_all(user=user, item_status=item_status, item_base_id=random_item.item_base_id)
+    
+    # aktualizace DMG po přidání nové zbraně do inventáře
+    dmg_update(player=user)
 
     return Response({"message": f"Náhodná věc úspěšně vygenerována pro hráče {user.username}"}, status=status.HTTP_200_OK)
 
@@ -277,7 +288,13 @@ def toggle_equip(request):
             
         item.item_status = new_status
         item.save()
+        
+    # aktualizace DMG po změně vybavení
+        dmg_update(player=user)
         player.save()
+        
+
+    
         return Response({"message": f"Status položky '{item_name}' úspěšně změněn na '{new_status}'"}, status=status.HTTP_200_OK)
     
     
@@ -341,7 +358,8 @@ def registrace(request):
     for i in items_id:
         item_generator_all(user=user, item_status="inventory", item_base_id=i)
     
-    
+    # přiřazení základních atributů podle role a aktualizace HP
+    dmg_update(player=user)
     
     return Response({"message": f"Registrace proběhla úspěšně: Jméno: {username}, Role: {role}, Pohlaví: {gender}"}, status=status.HTTP_201_CREATED)
 

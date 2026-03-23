@@ -21,6 +21,9 @@ class Enemy(models.Model):
 # STATY
     hp = models.IntegerField(blank=True, null=True)
     hp_regen_5s = models.FloatField(blank=True, null=True)
+    hp_actual = models.IntegerField(default=1, blank=True) # <-- Aktuální HP, které se mění během boje, ale neovlivňuje max HP
+    
+    
     armor = models.IntegerField(blank=True, null=True)
     dmg_min = models.IntegerField(blank=True, null=True)
     dmg_max = models.IntegerField(blank=True, null=True)
