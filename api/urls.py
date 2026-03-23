@@ -10,4 +10,5 @@ urlpatterns = [
     path('add_atr/', views.add_atr, name='add_atr'),
     path('admin_random_item/', views.admin_random_item, name='admin_random_item'),
     path('toggle_equip/', views.toggle_equip, name='toggle_equip'),
+    path('init_fight/', views.init_fight, name='init_fight'),
 ]

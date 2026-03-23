@@ -19,6 +19,7 @@ from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
 from profile_app.atributs import atr_up, atr_role_default
 from item_app.item_generator import item_generator_all
+from fight_app.fight import fight
 
 
 @api_view(['GET'])
@@ -75,6 +76,33 @@ def get_player_profile(request):
   
         
     }, status=status.HTTP_200_OK)
+
+
+# SOUBOJE
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def init_fight(request):
+    print("Funkce init_fight byla zavolána!")
+    
+# NAČTENÍ DAT Z FRONTENDU
+    user = request.user
+    enemy_init_name = request.data.get('enemy_init_name')
+
+    if not enemy_init_name:
+        return Response({"error": "Chybí název nepřítele"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not user:
+        return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if not enemy_init_name:
+        return Response({"error": "Nepřítel nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+# ZAVOLÁNÍ FUNKCE PRO SOUBOJ
+    result = fight(player=user, enemy_init_name=enemy_init_name)
+    
+    
+# VRÁCENÍ VÝSLEDKU FRONTENDU
+    return Response({"message": f"Výsledek souboje: {result}"}, status=status.HTTP_200_OK)
 
 
 

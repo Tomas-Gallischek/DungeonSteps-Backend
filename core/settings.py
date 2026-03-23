@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'api',
     'profile_app',
     'item_app',
+    'enemy_app',
+    'fight_app',
 ]
 
 MIDDLEWARE = [
