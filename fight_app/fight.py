@@ -23,3 +23,11 @@ def fight(player, enemy_init_name):
     result = winner
        
     return result
+
+
+
+# SOUBOJOVÁ LOGIKA:
+
+# 1) Načtení obou stran
+
+# 2) Porovnání atributů (síla, obratnost, inteligence)

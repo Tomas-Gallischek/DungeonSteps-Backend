@@ -34,6 +34,15 @@ class Player_info(models.Model):
     steps_today = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     
 # ATRIBUTY
+    hp_base = models.IntegerField(default=0, blank=True)
+    hp_stats = models.IntegerField(default=0, blank=True)
+    hp_lvl = models.IntegerField(default=0, blank=True)
+    hp_eqp = models.IntegerField(default=0, blank=True)
+    hp_max = models.IntegerField(default=0, blank=True)
+    
+    hp_vit_koef = models.IntegerField(("HP Vitality Coefficient"), default=1, blank=True)  # Koeficient pro výpočet HP z vitality
+    hp_lvl_koef = models.IntegerField(("HP Level Coefficient"), default=10, blank=True)  # Koeficient pro výpočet HP z úrovně
+
     str_base = models.IntegerField(default=1, blank=True)
     str_stats = models.IntegerField(default=0, blank=True)
     str_eqp = models.IntegerField(default=0, blank=True)
@@ -60,7 +69,7 @@ class Player_info(models.Model):
     luck_max = models.IntegerField(default=1, blank=True)
     
 # BOJ
-    hp = models.IntegerField(default=50, blank=True)
+
     attack_number = models.IntegerField(default=1, blank=True)
     attack_speed = models.FloatField(default=1, blank=True)
     defence_number = models.IntegerField(default=1, blank=True)   

@@ -17,7 +17,7 @@ from item_app.models import Item_default
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
-from profile_app.atributs import atr_up, atr_role_default
+from profile_app.atributs import atr_up, atr_role_default, hp_update
 from item_app.item_generator import item_generator_all
 from fight_app.fight import fight
 
@@ -29,6 +29,8 @@ def get_player_profile(request):
     user = request.user
     player = Player_info.objects.filter(username=user).first()
     all_items = Player_Items.objects.all().filter(player=player)  # Získáme všechny položky patřící hráči
+    
+    print(f"DEBUG: HP hráče {user.username} je {player.hp_max}")  # Debug výpis HP hráče
     
     if not player:
         return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
@@ -47,6 +49,15 @@ def get_player_profile(request):
         "int_max": player.int_max,
         "vit_max": player.vit_max,
         "luck_max": player.luck_max,
+        
+        # HP
+        "hp_base": player.hp_base,
+        "hp_stats": player.hp_stats,
+        "hp_lvl": player.hp_lvl,
+        "hp_eqp": player.hp_eqp,
+        "hp_max": player.hp_max,
+        "hp_vit_koef": player.hp_vit_koef,
+        "hp_lvl_koef": player.hp_lvl_koef,
         
         # points
         "atr_points": player.atr_points,   
@@ -73,7 +84,7 @@ def get_player_profile(request):
         # EQP
         "weapon_equipped": player.weapon,
         "armor_equipped": player.armor,
-  
+
         
     }, status=status.HTTP_200_OK)
 
@@ -117,20 +128,35 @@ def add_atr(request):
     if not player:
         return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
     
-    atr_name = request.data.get('atr')
+    # Získáme slovník updatů (např. {"str": 2, "vit": 1})
+    updates = request.data.get('updates', {})
     
-    if atr_name not in ['str', 'dex', 'int', 'vit', 'luck']:
-        return Response({"error": "Neplatný název stat"}, status=status.HTTP_400_BAD_REQUEST)
+    if not isinstance(updates, dict):
+        return Response({"error": "Očekáván slovník s updaty"}, status=status.HTTP_400_BAD_REQUEST)
     
-    if player.atr_points <= 0:
-        return Response({"error": "Nedostatek atributových bodů"}, status=status.HTTP_400_BAD_REQUEST)
-  
-    # FUNKCE PRO ZVÝŠENÍ ATRIBUTŮ
-    atr_up(user=user, atr_name=atr_name)
+    valid_atrs = ['str', 'dex', 'int', 'vit', 'luck']
+    total_requested_points = 0
     
+    # 1. Kontrola platnosti dat a sečtení všech požadovaných bodů
+    for atr_name, amount in updates.items():
+        if atr_name not in valid_atrs:
+            return Response({"error": f"Neplatný název statu: {atr_name}"}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(amount, int) or amount < 0:
+            return Response({"error": "Neplatná hodnota pro zvýšení"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        total_requested_points += amount
+        
+    # 2. Kontrola, zda má hráč dostatek bodů na celou dávku
+    if player.atr_points < total_requested_points:
+        return Response({"error": "Nedostatek atributových bodů na tuto operaci"}, status=status.HTTP_400_BAD_REQUEST)
 
     
-    return Response({"message": f"Úspěšně zvýšen {atr_name} na {getattr(player, f'{atr_name}_stats')}"}, status=status.HTTP_200_OK)
+    atr_up(user=user, updates=updates)
+    
+    # Volitelné: Načtení aktuálních dat pro přesnou zprávu
+    player.refresh_from_db()
+    
+    return Response({"message": f"Úspěšně rozděleno {total_requested_points} bodů."}, status=status.HTTP_200_OK)
 
 
 
@@ -281,9 +307,9 @@ def registrace(request):
         role = 'mage'
     elif role == 'Hraničář':
         role = 'hunter'
+
     
-
-
+    
     if not username or not password:
         return Response({"error": "Chybí jméno nebo heslo"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -298,8 +324,13 @@ def registrace(request):
     
     # přiřazení pohlaví do profilu
     player = Player_info.objects.filter(username=user).first()
+       
     player.gender = gender
     player.role = role
+
+    # nastavení základních životů
+    hp_update(player=player, update_type='registrace')
+
     player.save()
 
     # Přiřazení základních atributů podle role
