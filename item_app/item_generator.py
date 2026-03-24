@@ -88,7 +88,6 @@ def item_generator_all(user, item_status, item_base_id, item_category, amount):
         Player_Items_EQP_ABLE.objects.create(
             player=player,
             item_base_id=item_base_id,
-            item_id=item.item_base_id,
             name=item.name,
             item_status=item_status,
             amount=amount,
@@ -109,7 +108,6 @@ def item_generator_all(user, item_status, item_base_id, item_category, amount):
     elif item.category == "material":
         Player_Item_Material.objects.create(
             player=player,
-            item_id=item.item_base_id,
             item_base_id=item_base_id,
             item_status=item_status,
             amount=amount,
