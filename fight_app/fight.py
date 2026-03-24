@@ -5,6 +5,7 @@ from enemy_app.models import Enemy
 import random
 from django.utils import timezone
 from .models import fight_log
+from .loot import loot_generator
 
 def fight(player, enemy_init_name):
     turn_logs = []
@@ -58,6 +59,8 @@ def fight(player, enemy_init_name):
             if e_actual_hp <= 0:
                 winner = player.username
                 print(f"{player.username} has defeated {enemy.name}!")
+                loot_generator(player=player, enemy=enemy)
+
                 break
 
         # --- ENEMY ---
@@ -90,6 +93,7 @@ def fight(player, enemy_init_name):
             if p_actual_hp <= 0:
                 winner = enemy.name
                 print(f"{enemy.name} has defeated {player.username}!")
+                loot_generator(player=player, enemy=enemy)
                 break
 
     # UKONČENÍ SOUBOJE A ULOŽENÍ LOGU
