@@ -11,15 +11,16 @@ import random
 
 
 # NAČÍTÁNÍ MODELU
-from profile_app.models import Player_info, Player_Items
+from profile_app.models import Player_info, Player_Items_EQP_ABLE, Player_Item_Material
 from item_app.models import Item_default
 
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
-from profile_app.atributs import atr_up, atr_role_default, hp_update, dmg_update, armor_update
+from profile_app.register import default_atr, default_hp
 from item_app.item_generator import item_generator_all
 from fight_app.fight import fight
+
 
 
 @api_view(['GET'])
@@ -27,14 +28,13 @@ from fight_app.fight import fight
 def get_player_profile(request):    
     user = request.user
     player = Player_info.objects.filter(username=user).first()
-    all_items = Player_Items.objects.all().filter(player=player)  # Získáme všechny položky patřící hráči
-    
-    UPDATE(user)
+    all_items_eqp_able = Player_Items_EQP_ABLE.objects.all().filter(player=player)  # Získáme všechny vybavitelné položky patřící hráči
+    all_items_material = Player_Item_Material.objects.all().filter(player=player)  # Získáme všechny materiály patřící hráči
     
     if not player:
         return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
     
-
+    player.save()
         
     return Response({
         
@@ -65,24 +65,41 @@ def get_player_profile(request):
         "skill_points": player.skill_points,
         
         # items
-        "all_items": [{
-            "item_status": item.item_status,
+        "all_items_eqp_able": [{
+            "player": user.username,
+            "item_base_id": item.item_base_id,
             "item_id": item.item_id,
-            "item_name": item.name,
-            "item_description": item.description,
-            "item_category": item.category,
-            "item_dmg_type": item.dmg_type,
+            "item_status": item.item_status,
+            "amount": item.amount,
+            "name": item.name,
+            "description": item.description,
+            "category": item.category,
+            "dmg_type": item.dmg_type,
             "lvl_req": item.lvl_req,
-            "item_rarity": item.rarity,
-            "price": item.price,
+            "rarity": item.rarity,
+            "price_ks": item.price_ks,
+            "price_all": item.price_all,
             "dmg_min": item.dmg_min,
             "dmg_max": item.dmg_max,
             "dmg_avg": item.dmg_avg,
             "armor": item.armor,
             "item_bonus": item.item_bonus,
-        } for item in all_items],
+        } for item in all_items_eqp_able],
         
-
+        "all_items_material": [{
+            "player": user.username,
+            "item_id": item.item_id,
+            "item_base_id": item.item_base_id,
+            "item_status": item.item_status,
+            "amount": item.amount,
+            "name": item.name,
+            "description": item.description,
+            "category": item.category,
+            "lvl_req": item.lvl_req,
+            "rarity": item.rarity,
+            "price_ks": item.price_ks,
+            "price_all": item.price_all,
+        } for item in all_items_material],
         
     }, status=status.HTTP_200_OK)
 
@@ -94,6 +111,7 @@ def init_fight(request):
     
 # NAČTENÍ DAT Z FRONTENDU
     user = request.user
+    player = Player_info.objects.filter(username=user).first()
     enemy_init_name = request.data.get('enemy_init_name')
 
     if not enemy_init_name:
@@ -104,9 +122,10 @@ def init_fight(request):
     
     if not enemy_init_name:
         return Response({"error": "Nepřítel nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+
     
-# AKTUALIZACE STATŮ:
-    UPDATE(user)
+# AKTUALIZACE DAT PŘED SOUBOJEM
+    player.save()
     
 # ZAVOLÁNÍ FUNKCE PRO SOUBOJ
     result = fight(player=user, enemy_init_name=enemy_init_name)
@@ -114,9 +133,6 @@ def init_fight(request):
     
 # VRÁCENÍ VÝSLEDKU FRONTENDU
     return Response({"message": f"Výsledek souboje: {result}"}, status=status.HTTP_200_OK)
-
-
-
 
 # ZVYŠOVÁNÍ STATŮ
 @api_view(['POST'])
@@ -136,8 +152,7 @@ def add_atr(request):
     
     valid_atrs = ['str', 'dex', 'int', 'vit', 'luck']
     total_requested_points = 0
-    
-    # 1. Kontrola platnosti dat a sečtení všech požadovaných bodů
+
     for atr_name, amount in updates.items():
         if atr_name not in valid_atrs:
             return Response({"error": f"Neplatný název statu: {atr_name}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -146,29 +161,147 @@ def add_atr(request):
         
         total_requested_points += amount
         
-    # 2. Kontrola, zda má hráč dostatek bodů na celou dávku
     if player.atr_points < total_requested_points:
         return Response({"error": "Nedostatek atributových bodů na tuto operaci"}, status=status.HTTP_400_BAD_REQUEST)
 
-    
-    atr_up(user=user, updates=updates)
-    
-    # Volitelné: Načtení aktuálních dat pro přesnou zprávu
-    player.refresh_from_db()
-    
-    # aktualizace DMG po změně atributů
-    UPDATE(user)
+    # AKTUALIZACE STATŮ V DATABÁZI - NA KONCI SE VOLÁ player.save() !!!!
+    player.atr_up(updates=updates)
     
     return Response({"message": f"Úspěšně rozděleno {total_requested_points} bodů."}, status=status.HTTP_200_OK)
 
 
+# NASAZOVÁNÍ A SUNDÁVÁNÍ VĚCÍ (OPTIMISTICKÝ UPDATE)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_equip(request):
+    user = request.user
+    item_name = request.data.get('item_name')
+    new_status = request.data.get('new_status')
+    item_id = request.data.get('item_id')
+    player = Player_info.objects.filter(username=user).first()
+    item = Player_Items_EQP_ABLE.objects.filter(item_id=item_id).first()
+
+    if new_status not in ['equipped', 'inventory']:
+        return Response({"error": "Neplatný status položky"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    if not player:
+        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if not item:
+        return Response({"error": "Položka nebyla nalezena"}, status=status.HTTP_404_NOT_FOUND)
+    
+    all_eqp_categories = Player_Items_EQP_ABLE.objects.filter(player=player, item_status='equipped').values_list('category', flat=True)
+    
+    if new_status == 'inventory':
+        item.item_status = 'inventory'
+        item.save()
+    elif new_status == 'equipped':
+        if item.category in all_eqp_categories:
+            Player_Items_EQP_ABLE.objects.filter(player=player, category=item.category, item_status='equipped').update(item_status='inventory')
+            item.save()
+        item.item_status = 'equipped'
+        item.save()     
+    
+    player.save()  # Aktualizace hráče po změně vybavení
+
+    return Response({"message": f"Status položky '{item_name}' úspěšně změněn na '{new_status}'"}, status=status.HTTP_200_OK)
+    
+    
+#--- LOGIN + REGISTRACE ---
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def registrace(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+    email = request.data.get('email', '')
+    gender = request.data.get('gender')
+    role = request.data.get('role') 
+
+    if gender == 'Muž':
+        gender = 'male'
+    elif gender == 'Žena':
+        gender = 'female'
+    else:
+        gender = 'other'
+        
+    if role == 'Válečník':
+        role = 'warrior'
+    elif role == 'Mág':
+        role = 'mage'
+    elif role == 'Hraničář':
+        role = 'hunter'
+
+    
+    
+    if not username or not password:
+        return Response({"error": "Chybí jméno nebo heslo"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(username=username).exists():
+        return Response({"error": "Uživatel již existuje"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Vytvoření uživatele (Django automaticky hash hesla)
+    user = User.objects.create_user(username=username, password=password, email=email)
+    
+    # Vytvoření profilu hráče
+    Player_info.objects.create(username=user)
+    
+    # přiřazení pohlaví do profilu
+    player = Player_info.objects.filter(username=user).first()
+       
+    player.gender = gender
+    player.role = role
+
+    # nastavení základních životů
+    default_hp(player=player, update_type='registrace')
+
+    player.save()
+
+    # Přiřazení základních atributů podle role
+    default_atr(user=user, role=role)
+    
+    # přiřazení základní výbavy
+    items_id = [1,2]
+    item_category = ["weapon", "armor"]
+    for i, category in zip(items_id, item_category):
+        item_generator_all(user=user, item_status="inventory", item_base_id=i, item_category=category, amount=1)
+    
+    return Response({"message": f"Registrace proběhla úspěšně: Jméno: {username}, Role: {role}, Pohlaví: {gender}"}, status=status.HTTP_201_CREATED)
+
+    token = Token.objects.create(user=user)
+    
+    return Response({"token": token.key, "message": "Registrace proběhla úspěšně"}, status=status.HTTP_201_CREATED)
+    
+    
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    # Autentizace uživatele
+    user = authenticate(username=username, password=password)
+
+    if user:
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            "token": token.key,
+            "username": user.username,
+            "message": "Přihlášení úspěšné"
+        }, status=status.HTTP_200_OK)
+    
+    return Response({"error": "Neplatné přihlašovací údaje"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# --- ADMIN CHEAT SEKCE ----
 
 # ADMIN - PŘIDÁVÁNÍ GOLDŮ
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def admin_plus_gold(request):
     print("Funkce admin_plus_gold byla zavolána!")
-    user = request.user # Django User objekt
+    user = request.user
     amount = request.data.get('amount') 
 
     try:
@@ -179,8 +312,6 @@ def admin_plus_gold(request):
     if amount <= 0:
         return Response({"error": "Parametr 'amount' musí být kladné číslo"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Funkce gold_plus z economy.py si už sama hráče v databázi vyhledá.
-    # Stačí jí předat 'user' a vyhodnotit, jestli vrátila True nebo False.
     uspech = gold_plus(user=user, amount=amount) 
     
     if not uspech:
@@ -229,147 +360,14 @@ def admin_random_item(request):
 
     all_items = Item_default.objects.all()
     random_item = random.choice(all_items)
+    item_category = random_item.category
+    amount = 1
     
     item_status = "inventory"
     
-    item_generator_all(user=user, item_status=item_status, item_base_id=random_item.item_base_id)
+    item_generator_all(user=user, item_status=item_status, item_base_id=random_item.item_base_id, item_category=item_category, amount=amount)
     
     # aktualizace DMG po přidání nové zbraně do inventáře
 
 
     return Response({"message": f"Náhodná věc úspěšně vygenerována pro hráče {user.username}"}, status=status.HTTP_200_OK)
-
-
-# NASAZOVÁNÍ A SUNDÁVÁNÍ VĚCÍ (OPTIMISTICKÝ UPDATE)
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def toggle_equip(request):
-    user = request.user
-
-    item_name = request.data.get('item_name')
-    new_status = request.data.get('new_status')
-    item_id = request.data.get('item_id')
-    player = Player_info.objects.filter(username=user).first()
-    item = Player_Items.objects.filter(item_id=item_id).first()
-
-    if new_status not in ['equipped', 'inventory']:
-        return Response({"error": "Neplatný status položky"}, status=status.HTTP_400_BAD_REQUEST)
-        
-    if not player:
-        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
-    
-    if not item:
-        return Response({"error": "Položka nebyla nalezena"}, status=status.HTTP_404_NOT_FOUND)
-    
-            
-    item.item_status = new_status
-    item.save()
-    
-    UPDATE(user)
-        
-
-    return Response({"message": f"Status položky '{item_name}' úspěšně změněn na '{new_status}'"}, status=status.HTTP_200_OK)
-    
-    
-
-# REGISTRACE UŽIVATELE
-@api_view(['POST'])
-@permission_classes([AllowAny]) # Registrace musí být přístupná všem
-def registrace(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-    email = request.data.get('email', '')
-    gender = request.data.get('gender')
-    role = request.data.get('role') 
- 
- 
-# convertování hodnot z frontendu na hodnoty pro databázi
-    if gender == 'Muž':
-        gender = 'male'
-    elif gender == 'Žena':
-        gender = 'female'
-    else:
-        gender = 'other'
-        
-    if role == 'Válečník':
-        role = 'warrior'
-    elif role == 'Mág':
-        role = 'mage'
-    elif role == 'Hraničář':
-        role = 'hunter'
-
-    
-    
-    if not username or not password:
-        return Response({"error": "Chybí jméno nebo heslo"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if User.objects.filter(username=username).exists():
-        return Response({"error": "Uživatel již existuje"}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Vytvoření uživatele (Django automaticky hash hesla)
-    user = User.objects.create_user(username=username, password=password, email=email)
-    
-    # Vytvoření profilu hráče
-    Player_info.objects.create(username=user)
-    
-    # přiřazení pohlaví do profilu
-    player = Player_info.objects.filter(username=user).first()
-       
-    player.gender = gender
-    player.role = role
-
-    # nastavení základních životů
-    hp_update(player=player, update_type='registrace')
-
-    player.save()
-
-    # Přiřazení základních atributů podle role
-    atr_role_default(user=user, role=role)
-    
-    # přiřazení základní výbavy
-    items_id = [1,2]
-    for i in items_id:
-        item_generator_all(user=user, item_status="inventory", item_base_id=i)
-    
-    # přiřazení základních atributů podle role a aktualizace HP
-
-    
-    return Response({"message": f"Registrace proběhla úspěšně: Jméno: {username}, Role: {role}, Pohlaví: {gender}"}, status=status.HTTP_201_CREATED)
-
-    
-    
-    # Vytvoření tokenu pro okamžité přihlášení po registraci
-    token = Token.objects.create(user=user)
-    
-    return Response({"token": token.key, "message": "Registrace proběhla úspěšně"}, status=status.HTTP_201_CREATED)
-    
-    
-# LOGIN UŽIVATELE - VLASTNÍ IMPLEMENTACE (NEPOUŽÍVÁME DJANGO REST FRAMEWORK TOKEN AUTH)
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def login_view(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-
-    # Autentizace uživatele
-    user = authenticate(username=username, password=password)
-
-    if user:
-        # Pokud uživatel existuje a heslo sedí, získáme nebo vytvoříme token
-        token, created = Token.objects.get_or_create(user=user)
-        return Response({
-            "token": token.key,
-            "username": user.username,
-            "message": "Přihlášení úspěšné"
-        }, status=status.HTTP_200_OK)
-    
-    return Response({"error": "Neplatné přihlašovací údaje"}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-def UPDATE(user):
-    print("AKTUALIZACE STATŮ PROBÍHÁ... ")
-    dmg_update(user)
-    armor_update(user)
-    
-    return True

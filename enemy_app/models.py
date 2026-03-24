@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from item_app.models import Item_default
 
 class Enemy(models.Model):
     
@@ -40,11 +41,16 @@ class Enemy(models.Model):
     crit_chance = models.FloatField(default = 0,blank=True, null=True)
     crit_multiplier = models.FloatField(default = 1,blank=True, null=True)
     
-# OSTATNÍ
-    loot = models.JSONField(blank=True, null=True)
-
-
-    
 
     def __str__(self):
         return self.name
+
+class loot(models.Model):
+    id_unique = models.AutoField(primary_key=True)
+    enemy = models.ForeignKey(Enemy, on_delete=models.CASCADE, related_name='loot_enemy')
+    item = models.ForeignKey(Item_default, on_delete=models.CASCADE, related_name='loot_items')
+    drop_rate = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(100)])
+    drop_max_amount = models.IntegerField(blank=True, null=True, default=1)
+    
+    def __str__(self):
+        return f"{self.enemy.name} - {self.item.name} ({self.drop_rate}%)"

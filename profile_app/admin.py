@@ -1,8 +1,10 @@
 from django.contrib import admin
-from .models import Player_info, Player_Items
+from .models import Player_info, Player_Items_EQP_ABLE, Player_Item_Material
 
 admin.site.register(Player_info)
-admin.site.register(Player_Items)
+admin.site.register(Player_Items_EQP_ABLE)
+admin.site.register(Player_Item_Material)
+
 
 
 admin.site.site_header = "Player Profile Admin"

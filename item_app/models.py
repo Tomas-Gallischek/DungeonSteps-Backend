@@ -1,43 +1,67 @@
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
+
 
 class Item_default(models.Model):
-    
-    # POUZE ZÁKLADNÍ INFORMACE O ITEMECH, BEZ VARIANT A UPGRADŮ 
-    
     CATEGORY_CHOICES = [
         ('weapon', 'Weapon'),
         ('armor', 'Armor'),
+        ('material', 'Material'),
         ('other', 'Other'),
     ]
-    
-    DMG_TYPE_CHOICES = [
-        ('heavy', 'Heavy'),
-        ('light', 'Light'),
-        ('magic', 'Magic'),
-        ('none', 'None'),
-    ]
-    
     name = models.CharField(max_length=100)
     item_base_id = models.IntegerField(unique=True, blank=True, null=True) # unikátní ID pro každý základní item, slouží k identifikaci při generování a upgradu
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    dmg_type = models.CharField(max_length=50, choices=DMG_TYPE_CHOICES)
     lvl_req = models.IntegerField(null=True, blank=True)
-    
-    dmg_base = models.IntegerField(null=True, blank=True) # základní hodnota poškození pro zbraně
-    
-    armor_base = models.IntegerField(null=True, blank=True) # základní hodnota obrany pro brnění
-    
-    drop_lvl_min = models.IntegerField(null=True, blank=True)
-    drop_lvl_max = models.IntegerField(null=True, blank=True)
-    drop_rate = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(1)]) # 1 = 100% drop rate
-    
-    
 
     
     def __str__(self):
         return self.name
+
+class Item_Weapon_Submodel(models.Model):
+    DMG_TYPE_CHOICES = [
+    ('heavy', 'Heavy'),
+    ('light', 'Light'),
+    ('magic', 'Magic'),
+    ('none', 'None'),
+]
+
+    item = models.OneToOneField(Item_default, on_delete=models.CASCADE, related_name='weapon_details')
+    dmg_type = models.CharField(max_length=50, choices=DMG_TYPE_CHOICES)
+    dmg_base = models.IntegerField(null=True, blank=True)  
+    
+class Item_Armor_Submodel(models.Model):
+    item = models.OneToOneField(Item_default, on_delete=models.CASCADE, related_name='armor_details')   
+    armor_base = models.IntegerField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.item.name} - Armor Details"
+    
+class Item_Material_Submodel(models.Model):
+    
+    TYPE_CHOICES = [
+        ('upgrade', 'Upgrade'),
+        ('crafting', 'Crafting'),
+        ('other', 'Other'),
+    ]
+    
+    RARITY_CHOICES = [
+    ('common', 'Common'),
+    ('rare', 'Rare'),
+    ('epic', 'Epic'),
+    ('legendary', 'Legendary'),
+]
+    
+    item = models.OneToOneField(Item_default, on_delete=models.CASCADE, related_name='material_details')   
+    material_type = models.CharField(max_length=50, blank=True, null=True, choices=TYPE_CHOICES)
+    rarity = models.CharField(max_length=50, blank=True, null=True, choices=RARITY_CHOICES)
+    max_stack = models.IntegerField(blank=True, null=True, default=50)
+    stack_able = models.BooleanField(default=True)
+    use_able = models.BooleanField(default=False)
+    price_ks = models.FloatField(blank=True, null=True, default=1)
+    
+    def __str__(self):
+        return f"{self.item.name} - Material Details"
 
 
 class All_Items_Bonus(models.Model):

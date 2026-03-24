@@ -1,5 +1,4 @@
 from .models import Player_info
-from .atributs import hp_update
 
 def xp_plus(user, xp_amount):
     print(f"Funkce xp_plus byla zavolána s uživatelem: {user} a množstvím XP: {xp_amount}")
@@ -26,5 +25,4 @@ def lvl_up(player):
     player.skill_points += 1
     print(f"Přidány atributové body: {player.atr_points}, skill body: {player.skill_points}")
     
-    # Aktualizace HP po zvýšení levelu
-    hp_update(player=player, update_type='lvl_up')
+    player.save()

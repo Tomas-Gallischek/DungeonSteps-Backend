@@ -1,20 +1,27 @@
-from profile_app.models import Player_info, Player_Items
+from profile_app.models import Player_info, Player_Items_EQP_ABLE, Player_Item_Material
 from .models import Item_default, All_Items_Bonus
 import random
 
 
 # ZÁKLADNÍ GENEROVÁNÍ ITEMŮ (SPECVIFICKÉ VĚCI SE GENERUJÍ V SEPARÁTNÍ FUNKCI, ABY TO BYLO PŘEHLEDNĚJŠÍ)
 
-def item_generator_all(user, item_status, item_base_id):
-    print("spuštění generátoru itemů")
+def item_generator_all(user, item_status, item_base_id, item_category, amount):
+    print(f"ITEM GENERATOR: {user}, {item_status}, {item_base_id}, {item_category}")
     
-# ZÁKLADNÍ NAČTENÍ
+# NAČTENÍ KONKRÉTNÍHO ITEMU I S JEHO SPECIFIÝMI INFORMACEMI
     player = Player_info.objects.get(username=user)
-    item = Item_default.objects.get(item_base_id=item_base_id)
+    
+    if item_category == "weapon":
+        item = Item_default.objects.select_related('weapon_details').get(item_base_id=item_base_id)
+        dmg_type = item.weapon_details.dmg_type
+    elif item_category == "armor":
+        item = Item_default.objects.select_related('armor_details').get(item_base_id=item_base_id)
+    elif item_category == "material":
+        item = Item_default.objects.select_related('material_details').get(item_base_id=item_base_id)
 
 # SPECIÁLNĚ PRO ZBRANĚ
     if item.category == "weapon":
-        dmg_min, dmg_max, dmg_avg = weapon_generator(player.lvl, item.dmg_base)
+        dmg_min, dmg_max, dmg_avg = weapon_generator(player.lvl, item.weapon_details.dmg_base)
     else:
         dmg_min = None
         dmg_max = None
@@ -22,7 +29,7 @@ def item_generator_all(user, item_status, item_base_id):
 
 # SPECIÁLNĚ PRO BRNĚNÍ
     if item.category == "armor":
-        armor = armor_generator(player.lvl, item.armor_base)
+        armor = armor_generator(player.lvl, item.armor_details.armor_base)
     else:
         armor = None
 
@@ -35,7 +42,7 @@ def item_generator_all(user, item_status, item_base_id):
         gen_rarity = "common"
 
 # CENA
-    price = price_generator(item, gen_rarity, player.lvl)
+    price_ks, price_all = price_generator(item, gen_rarity, player.lvl, amount)
     
 # BONUSY   
 # jelikož tady se to ukládá do slovníku tak to nechci komplikovat dalšíé funkcí
@@ -67,8 +74,8 @@ def item_generator_all(user, item_status, item_base_id):
             
             # Projdeme vybrané bonusy a každému přiřadíme hodnotu
             for bonus in vybrane_bonusy:
-                bonus_value = round(random.uniform(bonus.min_value, bonus.max_value), 2)
-                bonusy[bonus.type] = bonus_value 
+                bonus_value = round(random.uniform(bonus.min_value, bonus.max_value), 1)
+                bonusy[bonus.bonus_type] = bonus_value 
 
         print(f"bonusy: {bonusy}")
         
@@ -76,31 +83,46 @@ def item_generator_all(user, item_status, item_base_id):
         bonusy = {}
 
 
-
-
 # VYTVOŘENÍ PŘEDMĚTU PRO HRÁČE
-    Player_Items.objects.create(
-        player=player,
-        item_base_id=item_base_id,
-        item_status=item_status,
-        name=item.name,
-        description=item.description,
-        category=item.category,
-        dmg_type=item.dmg_type,
-        lvl_req=item.lvl_req,
-        rarity=gen_rarity,
-        price=price,
-        dmg_min=dmg_min,
-        dmg_max=dmg_max,
-        dmg_avg=dmg_avg,
-        armor=armor,
-        drop_lvl_max=item.drop_lvl_max,
-        drop_lvl_min=item.drop_lvl_min,
-        drop_rate=item.drop_rate,
-        item_bonus=bonusy
-    )
-    
-    return True
+    if item.category in ['weapon', 'armor']:
+        Player_Items_EQP_ABLE.objects.create(
+            player=player,
+            item_base_id=item_base_id,
+            item_id=item.item_base_id,
+            name=item.name,
+            item_status=item_status,
+            amount=amount,
+            description=item.description,
+            category=item.category,
+            dmg_type=dmg_type if item.category == "weapon" else None,
+            lvl_req=item.lvl_req,
+            rarity=gen_rarity,
+            price_ks=price_ks,
+            price_all=price_all,
+            dmg_min=dmg_min if item.category == "weapon" else None,
+            dmg_max=dmg_max if item.category == "weapon" else None,
+            dmg_avg=dmg_avg if item.category == "weapon" else None,
+            armor=armor if item.category == "armor" else None,
+            item_bonus=bonusy if bonusy else None,
+        )
+        
+    elif item.category == "material":
+        Player_Item_Material.objects.create(
+            player=player,
+            item_id=item.item_base_id,
+            item_base_id=item_base_id,
+            item_status=item_status,
+            amount=amount,
+            name=item.name,
+            description=item.description,
+            category=item.category,
+            lvl_req=item.lvl_req,
+            rarity=gen_rarity,
+            price_ks=price_ks,
+            price_all=price_all,
+        )
+        
+        return True
     
     
     
@@ -149,23 +171,31 @@ def rarity_generator(player_lvl):
     return gen_rarity
 
 
-def price_generator(item, rarity, player_lvl):
+def price_generator(item, rarity, player_lvl, amount):
     print("spuštění generátoru ceny")
     
-    base_price = item.lvl_req *5
-    
-    rarity_multiplier = {
-        'common': 1,
-        'rare': 1.5,
-        'epic': 2.5,
-        'legendary': 5,
-    }
-    
-    category_multiplier = {
-        'weapon': 1.5,
-        'armor': 1.2,
-        'other': 1,
-    }
-    
-    price = round((base_price * rarity_multiplier[rarity]) * category_multiplier[item.category])
-    return price
+    if item.category == "material":
+        return (item.material_details.price_ks), (item.material_details.price_ks * amount)
+    else:
+        price_ks = 1
+        price_all = 1
+        base_price = item.lvl_req *5
+        
+        rarity_multiplier = {
+            'common': 1,
+            'rare': 1.5,
+            'epic': 2.5,
+            'legendary': 5,
+        }
+        
+        category_multiplier = {
+            'weapon': 1.5,
+            'armor': 1.2,
+            'other': 1,
+        }
+        
+        price_ks = round((base_price * rarity_multiplier[rarity]) * category_multiplier[item.category])
+        price_all = price_ks * amount
+
+        
+        return price_ks, price_all
