@@ -53,4 +53,4 @@ class loot(models.Model):
     drop_max_amount = models.IntegerField(blank=True, null=True, default=1)
     
     def __str__(self):
-        return f"{self.enemy.name} - {self.item.name} ({self.drop_rate}%)"
+        return f"{self.enemy.name} - {self.item.name} ({self.drop_rate}% - max {self.drop_max_amount})"

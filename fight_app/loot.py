@@ -7,7 +7,6 @@ from item_app.models import Item_default
 def loot_generator(player, enemy):
     passible_loot = loot.objects.filter(enemy=enemy)
     all_items = Item_default.objects.all()
-    print(f"Possible loot for {enemy.name}: {passible_loot}")
 
     loot_obtained = []
     

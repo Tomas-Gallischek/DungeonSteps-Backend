@@ -17,7 +17,7 @@ class Item_default(models.Model):
     max_stack = models.IntegerField(blank=True, null=True, default=50)
     
     def __str__(self):
-        return self.name
+        return f"{self.name} - {self.category} - Base ID: {self.item_base_id}"
 
 class Item_Weapon_Submodel(models.Model):
     DMG_TYPE_CHOICES = [

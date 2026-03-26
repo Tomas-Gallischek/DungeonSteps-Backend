@@ -7,7 +7,7 @@ from item_app.stack_manage import stacks_items
 # ZÁKLADNÍ GENEROVÁNÍ ITEMŮ (SPECVIFICKÉ VĚCI SE GENERUJÍ V SEPARÁTNÍ FUNKCI, ABY TO BYLO PŘEHLEDNĚJŠÍ)
 
 def item_generator_all(user, item_status, item_base_id, item_category, amount):
-    print(f"ITEM GENERATOR: {user}, {item_status}, {item_base_id}, {item_category}")
+    print(f"Spouštím GENERÁTOR ITEMŮ pro: {user}")
     
 # NAČTENÍ KONKRÉTNÍHO ITEMU I S JEHO SPECIFIÝMI INFORMACEMI
     player = Player_info.objects.get(username=user)
@@ -77,8 +77,6 @@ def item_generator_all(user, item_status, item_base_id, item_category, amount):
             for bonus in vybrane_bonusy:
                 bonus_value = round(random.uniform(bonus.min_value, bonus.max_value), 1)
                 bonusy[bonus.bonus_type] = bonus_value 
-
-        print(f"bonusy: {bonusy}")
         
     else:
         bonusy = {}

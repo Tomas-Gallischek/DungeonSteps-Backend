@@ -67,6 +67,7 @@ def get_player_profile(request):
         # items
         "all_items_eqp_able": [{
             "player": user.username,
+            "item_id": item.item_id,
             "item_base_id": item.item_base_id,
             "item_status": item.item_status,
             "amount": item.amount,
@@ -87,6 +88,7 @@ def get_player_profile(request):
         
         "all_items_material": [{
             "player": user.username,
+            "item_id": item.item_id,
             "item_base_id": item.item_base_id,
             "item_status": item.item_status,
             "amount": item.amount,
@@ -176,8 +178,8 @@ def toggle_equip(request):
     item_name = request.data.get('item_name')
     new_status = request.data.get('new_status')
     player = Player_info.objects.filter(username=user).first()
-    item_base_id = request.data.get('item_base_id')
-    item = Player_Items_EQP_ABLE.objects.filter(item_base_id=item_base_id).first()
+    item_id = request.data.get('item_id')
+    item = Player_Items_EQP_ABLE.objects.filter(item_id=item_id).first()
 
     if new_status not in ['equipped', 'inventory']:
         return Response({"error": "Neplatný status položky"}, status=status.HTTP_400_BAD_REQUEST)
