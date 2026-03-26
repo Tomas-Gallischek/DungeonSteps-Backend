@@ -13,7 +13,8 @@ class Item_default(models.Model):
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     lvl_req = models.IntegerField(null=True, blank=True)
-
+    stack_able = models.BooleanField(default=True)
+    max_stack = models.IntegerField(blank=True, null=True, default=50)
     
     def __str__(self):
         return self.name
@@ -55,9 +56,6 @@ class Item_Material_Submodel(models.Model):
     item = models.OneToOneField(Item_default, on_delete=models.CASCADE, related_name='material_details')   
     material_type = models.CharField(max_length=50, blank=True, null=True, choices=TYPE_CHOICES)
     rarity = models.CharField(max_length=50, blank=True, null=True, choices=RARITY_CHOICES)
-    max_stack = models.IntegerField(blank=True, null=True, default=50)
-    stack_able = models.BooleanField(default=True)
-    use_able = models.BooleanField(default=False)
     price_ks = models.FloatField(blank=True, null=True, default=1)
     
     def __str__(self):

@@ -235,8 +235,7 @@ class Player_Items_EQP_ABLE(models.Model):
     
     player = models.ForeignKey(Player_info, on_delete=models.CASCADE, related_name='items')
     item_base_id = models.IntegerField(blank=True, null=True) # odkaz na základní item pro případ upgradu a generování, může být null pro unikátní předměty vytvořené jen pro hráče
-    item_id = models.AutoField(primary_key=True, unique=True)
-    
+    item_id = models.AutoField(primary_key=True, unique=True) # unikátní ID pro každý konkrétní item, které se nikdy nemění, i když se mění item_base_id při upgradu
     item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='none')
     
     amount = models.IntegerField(default=1, validators=[MinValueValidator(1)]) # pro stackovatelné předměty, jako jsou materiály, může být více kusů stejného itemu, pro ne-stackovatelné předměty bude vždy 1
@@ -295,8 +294,8 @@ class Player_Item_Material(models.Model):
     ]
     
     player = models.ForeignKey(Player_info, on_delete=models.CASCADE, related_name='materials')
-    item_id = models.AutoField(primary_key=True, unique=True)
     item_base_id = models.IntegerField(blank=True, null=True) # odkaz na základní item pro případ upgradu a generování, může být null pro unikátní předměty vytvořené jen pro hráče
+    item_id = item_id = models.AutoField(primary_key=True, unique=True)
     item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='none')
     amount = models.IntegerField(default=1, validators=[MinValueValidator(1)]) # pro stackovatelné předměty, jako jsou materiály, může být více kusů stejného itemu, pro ne-stackovatelné předměty bude vždy 1
 
@@ -308,6 +307,10 @@ class Player_Item_Material(models.Model):
     rarity = models.CharField(null=True, blank=True, max_length=20, choices=RARITY_CHOICES)
     price_ks = models.FloatField(null=True, blank=True, validators=[MinValueValidator(1)])
     price_all = models.FloatField(null=True, blank=True, validators=[MinValueValidator(1)])
+    
+    stack_able = models.BooleanField(default=True) # určuje, zda lze předmět stakovat (např. materiály) nebo ne (např. zbraně a zbroje)
+    max_stack = models.IntegerField(default=50, validators=[MinValueValidator(1)], blank=True, null=True) # maximální počet kusů stejného předmětu v jednom stacku, relevantní pouze pro stackovatelné předměty
 
     def __str__(self):
-        return f"{self.name} (ID: {self.item_id}) - {self.rarity} - Amount: {self.amount}"
+        return f"{self.name} (ID: {self.item_base_id}) - {self.rarity} - Amount: {self.amount}"
+    

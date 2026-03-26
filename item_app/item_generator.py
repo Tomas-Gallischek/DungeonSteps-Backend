@@ -1,6 +1,7 @@
 from profile_app.models import Player_info, Player_Items_EQP_ABLE, Player_Item_Material
 from .models import Item_default, All_Items_Bonus
 import random
+from item_app.stack_manage import stacks_items
 
 
 # ZÁKLADNÍ GENEROVÁNÍ ITEMŮ (SPECVIFICKÉ VĚCI SE GENERUJÍ V SEPARÁTNÍ FUNKCI, ABY TO BYLO PŘEHLEDNĚJŠÍ)
@@ -106,20 +107,30 @@ def item_generator_all(user, item_status, item_base_id, item_category, amount):
         )
         
     elif item.category == "material":
-        Player_Item_Material.objects.create(
-            player=player,
-            item_base_id=item_base_id,
-            item_status=item_status,
-            amount=amount,
-            name=item.name,
-            description=item.description,
-            category=item.category,
-            lvl_req=item.lvl_req,
-            rarity=gen_rarity,
-            price_ks=price_ks,
-            price_all=price_all,
-        )
-        
+        # Pokud hráč již má tento materiál, aktualizujeme množství, jinak vytvoříme nový záznam
+        if Player_Item_Material.objects.filter(player=player, item_base_id=item_base_id).exists():
+            print("Hráč již má tento materiál, aktualizuji množství.")
+            existing_item = Player_Item_Material.objects.get(player=player, item_base_id=item_base_id)
+            existing_item.amount += amount
+            existing_item.save()
+        else:
+            print("Hráč tento materiál ještě nemá, vytvářím nový záznam.")
+            Player_Item_Material.objects.create(
+                player=player,
+                item_base_id=item_base_id,
+                item_status=item_status,
+                amount=amount,
+                name=item.name,
+                description=item.description,
+                category=item.category,
+                lvl_req=item.lvl_req,
+                rarity=gen_rarity,
+                price_ks=price_ks,
+                price_all=price_all,
+                stack_able=item.stack_able,
+                max_stack=item.max_stack,
+            )
+            stacks_items(player)
         return True
     
     
