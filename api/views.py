@@ -104,6 +104,24 @@ def get_player_profile(request):
     }, status=status.HTTP_200_OK)
 
 
+# OBCHOD
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def shop_refresh(request):
+    
+# NAČTENÍ DAT Z FRONTENDU
+    user = request.user
+    player = Player_info.objects.filter(username=user).first()
+
+    if not user:
+        return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+
+    gold_plus(user=player, amount=-100)  # Odečteme 100 goldů za refresh obchodu
+    
+# VRÁCENÍ VÝSLEDKU FRONTENDU
+    return Response(status=status.HTTP_200_OK)
+
+
 # SOUBOJE
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
