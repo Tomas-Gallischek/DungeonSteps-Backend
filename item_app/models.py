@@ -13,6 +13,8 @@ class Item_default(models.Model):
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     lvl_req = models.IntegerField(null=True, blank=True)
+    lvl_max_req = models.IntegerField(null=True, blank=True)
+    
     stack_able = models.BooleanField(default=True)
     max_stack = models.IntegerField(blank=True, null=True, default=50)
     

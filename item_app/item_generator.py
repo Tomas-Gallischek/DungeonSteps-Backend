@@ -201,7 +201,9 @@ def price_generator(item, rarity, player_lvl, amount):
             'other': 1,
         }
         
-        price_ks = round((base_price * rarity_multiplier[rarity]) * category_multiplier[item.category])
+        random_factor = random.uniform(0.8, 1.2) # náhodný faktor pro cenu (±20%)
+        
+        price_ks = round(((base_price * rarity_multiplier[rarity]) * category_multiplier[item.category] * random_factor), 1)
         price_all = price_ks * amount
 
         
