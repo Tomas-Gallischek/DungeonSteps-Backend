@@ -25,6 +25,10 @@ class Player_info(models.Model):
     xp_next_lvl = models.IntegerField(default=8000, validators=[MinValueValidator(1)])
     gold = models.IntegerField(default=0, validators=[MinValueValidator(0)])
 
+# OBRÁZKY
+    avatar_img_ozn = models.CharField(default='avatar_default', max_length=100, null=True, blank=True)
+    background = models.CharField(default='background_default', max_length=100, null=True, blank=True)
+
 # POINTS
     atr_points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     skill_points = models.IntegerField(default=0, validators=[MinValueValidator(0)])

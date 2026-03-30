@@ -128,3 +128,9 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated', # V základu bude vše zamčené
     ],
 }
+
+# URL adresa, přes kterou bude prohlížeč k obrázkům přistupovat
+MEDIA_URL = '/media/'
+
+# Absolutní cesta v systému, kde budou soubory fyzicky uloženy
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

@@ -38,6 +38,9 @@ def get_shop(request):
         return Response({
             "items_in_shop": [{
                 "item_id": item.item_id,
+                "item_img_ozn": item.item_img_ozn,
+                "item_base_id": item.item_base_id,
+                "item_status": item.item_status,
                 "name": item.name,
                 "description": item.description,
                 "category": item.category,
@@ -103,6 +106,7 @@ def get_player_profile(request):
         "all_items_eqp_able": [{
             "player": user.username,
             "item_id": item.item_id,
+            "item_img_ozn": item.item_img_ozn,
             "item_base_id": item.item_base_id,
             "item_status": item.item_status,
             "amount": item.amount,
@@ -124,6 +128,7 @@ def get_player_profile(request):
         "all_items_material": [{
             "player": user.username,
             "item_id": item.item_id,
+            "item_img_ozn": item.item_img_ozn,
             "item_base_id": item.item_base_id,
             "item_status": item.item_status,
             "amount": item.amount,

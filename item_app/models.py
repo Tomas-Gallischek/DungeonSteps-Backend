@@ -9,6 +9,7 @@ class Item_default(models.Model):
         ('other', 'Other'),
     ]
     name = models.CharField(max_length=100)
+    item_img_ozn = models.CharField(default='item_default', max_length=100, blank=True, null=True)
     item_base_id = models.IntegerField(unique=True, blank=True, null=True) # unikátní ID pro každý základní item, slouží k identifikaci při generování a upgradu
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
