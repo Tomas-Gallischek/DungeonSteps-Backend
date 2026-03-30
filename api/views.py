@@ -394,11 +394,13 @@ def registrace(request):
     for i, category in zip(items_id, item_category):
         item_generator_all(user=user, item_status="inventory", item_base_id=i, item_category=category, amount=1)
     
-    return Response({"message": f"Registrace proběhla úspěšně: Jméno: {username}, Role: {role}, Pohlaví: {gender}"}, status=status.HTTP_201_CREATED)
-
-    token = Token.objects.create(user=user)
+# Vytvoření tokenu pro nového uživatele
+    token, created = Token.objects.get_or_create(user=user)
     
-    return Response({"token": token.key, "message": "Registrace proběhla úspěšně"}, status=status.HTTP_201_CREATED)
+    return Response({
+        "token": token.key, 
+        "message": f"Registrace proběhla úspěšně: Jméno: {username}, Role: {role}, Pohlaví: {gender}"
+    }, status=status.HTTP_201_CREATED)
     
     
 @api_view(['POST'])

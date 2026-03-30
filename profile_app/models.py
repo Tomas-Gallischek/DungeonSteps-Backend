@@ -241,6 +241,7 @@ class Player_Items_EQP_ABLE(models.Model):
     item_base_id = models.IntegerField(blank=True, null=True) # odkaz na základní item pro případ upgradu a generování, může být null pro unikátní předměty vytvořené jen pro hráče
     item_id = models.AutoField(primary_key=True, unique=True) # unikátní ID pro každý konkrétní item, které se nikdy nemění, i když se mění item_base_id při upgradu
     item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='none')
+    item_img_ozn = models.CharField(default='item_default', max_length=100, null=True, blank=True) # odkaz na obrázek itemu, může být null pro unikátní předměty vytvořené jen pro hráče
     
     amount = models.IntegerField(default=1, validators=[MinValueValidator(1)]) # pro stackovatelné předměty, jako jsou materiály, může být více kusů stejného itemu, pro ne-stackovatelné předměty bude vždy 1
 
@@ -300,6 +301,8 @@ class Player_Item_Material(models.Model):
     player = models.ForeignKey(Player_info, on_delete=models.CASCADE, related_name='materials')
     item_base_id = models.IntegerField(blank=True, null=True) # odkaz na základní item pro případ upgradu a generování, může být null pro unikátní předměty vytvořené jen pro hráče
     item_id = item_id = models.AutoField(primary_key=True, unique=True)
+    item_img_ozn = models.CharField(default='item_default', max_length=100, null=True, blank=True) # odkaz na obrázek itemu, může být null pro unikátní předměty vytvořené jen pro hráče
+    
     item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='none')
     amount = models.IntegerField(default=1, validators=[MinValueValidator(1)]) # pro stackovatelné předměty, jako jsou materiály, může být více kusů stejného itemu, pro ne-stackovatelné předměty bude vždy 1
 
