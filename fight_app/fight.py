@@ -115,6 +115,7 @@ def fight(player, enemy_init_name):
 
 def get_fight_logs(current_time, defender, attacker, defender_actual_hp, attacker_actual_hp, damage_dealt, turn_logs, damage_status):
 
+        print(f"Čas: {current_time:.2f}s | Útočník: {attacker} | Obránce: {defender} | Poškození: {damage_dealt} ({damage_status}) | HP obránce: {max(0, defender_actual_hp)} | HP útočníka: {max(0, attacker_actual_hp)}")
         turn_logs.append({
         "time_offset": round(current_time, 2),
         "attacker": str(attacker),

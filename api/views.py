@@ -10,9 +10,12 @@ from rest_framework.permissions import IsAuthenticated
 import random
 
 
+
 # NAČÍTÁNÍ MODELU
 from profile_app.models import Player_info, Player_Items_EQP_ABLE, Player_Item_Material
 from item_app.models import Item_default
+from map_app.models import Dungeon
+from enemy_app.models import Enemy
 
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
@@ -146,6 +149,39 @@ def get_player_profile(request):
     }, status=status.HTTP_200_OK)
 
 
+# MAPA
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_dungeon_details(request, dungeon_id):
+    try:
+        dungeon = Dungeon.objects.get(id=dungeon_id)
+    except Dungeon.DoesNotExist:
+        return Response({"error": "Dungeon nenalezen."}, status=status.HTTP_404_NOT_FOUND)
+    
+    player= Player_info.objects.filter(username=request.user).first()
+    
+    if player.lvl < dungeon.min_level:
+        return Response({"error": "Úroveň hráče není dostatečná pro vstup do tohoto dungeonu."}, status=status.HTTP_403_FORBIDDEN)
+
+    enemies_list = list(dungeon.enemies.all().values())
+
+    # 3. Ručně si sestavíme slovník pro dungeon (tvůj zavedený postup)
+    dungeon_data = {
+        "id": dungeon.id,
+        "dungeon_base_id": dungeon.dungeon_base_id,
+        "name": dungeon.name,
+        "description": dungeon.description,
+        "background_img": dungeon.background_img,
+        "min_level": dungeon.min_level,
+        "enemies": enemies_list  # Zde předáváme ten obrovský seznam se všemi daty o příšerách
+    }
+
+    # 4. Odešleme na frontend
+    return Response(dungeon_data, status=status.HTTP_200_OK)
+
+
 # OBCHOD
 
 @api_view(['POST'])
@@ -245,11 +281,14 @@ def init_fight(request):
 # NAČTENÍ DAT Z FRONTENDU
     user = request.user
     player = Player_info.objects.filter(username=user).first()
-    enemy_init_name = request.data.get('enemy_init_name')
+    
+    dungeon_base_id = request.data.get('dungeon_base_id')
+    dungeon = Dungeon.objects.filter(dungeon_base_id=dungeon_base_id).first() if Dungeon.objects.filter(dungeon_base_id=dungeon_base_id).exists() else None
+    
+    enemy_init_name = dungeon.enemies.first().name if dungeon and dungeon.enemies.exists() else None
 
-    if not enemy_init_name:
-        return Response({"error": "Chybí název nepřítele"}, status=status.HTTP_400_BAD_REQUEST)
-
+    print(f"Inicializuji souboj pro hráče {user.username} v dungeonu {dungeon.name if dungeon else 'Neznámý dungeon'} proti nepříteli {enemy_init_name}")
+    
     if not user:
         return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
     
@@ -260,8 +299,13 @@ def init_fight(request):
 # AKTUALIZACE DAT PŘED SOUBOJEM
     player.save()
     
+# SPECIFIKA PRO DUNGEONY:
+    enemy = Enemy.objects.filter(init_name=enemy_init_name).first() if Enemy.objects.filter(init_name=enemy_init_name).exists() else None
+
+    
+    
 # ZAVOLÁNÍ FUNKCE PRO SOUBOJ
-    result = fight(player=user, enemy_init_name=enemy_init_name)
+    result = fight(player=user, enemy_init_name=enemy.init_name) if enemy else None
     
     
 # VRÁCENÍ VÝSLEDKU FRONTENDU

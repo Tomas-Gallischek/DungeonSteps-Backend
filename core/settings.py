@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'item_app',
     'enemy_app',
     'fight_app',
+    'map_app',
 ]
 
 MIDDLEWARE = [
