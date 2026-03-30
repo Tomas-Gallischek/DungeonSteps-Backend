@@ -81,6 +81,8 @@ def get_player_profile(request):
         "lvl": player.lvl,
         "xp": player.xp,
         "gold": player.gold,
+        "role": player.role,
+        "avatar_img_ozn": player.avatar_img_ozn,
         
         # atributes
         "str_max": player.str_max,
@@ -176,7 +178,6 @@ def shop_buy(request):
 def sell_item(request):
     user = request.user
     player = Player_info.objects.filter(username=user).first()
-    print(f"Zpracovává se prodej položky pro hráče {user.username}")
     
     if not player:
         return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
@@ -184,33 +185,37 @@ def sell_item(request):
     item_id = request.data.get('item_id')
     item_name = request.data.get('item_name')
     item_price = request.data.get('item_price')
+    amount = request.data.get('amount')
     
-    print(f"Zpracovává se prodej položky: {item_name} (ID: {item_id}) za cenu {item_price} zlata pro hráče {user.username}")
+    
+    print(f"PRODÁVÁM {amount} KS POLOŽKY: {item_name} (ID: {item_id}) za cenu {item_price} zlata za kus pro hráče {user.username}")    
 
     if not item_id or not item_name or not item_price:
         return Response({"error": "Chybí informace o položce"}, status=status.HTTP_400_BAD_REQUEST)
-    
-    print(f"Zpracovává se prodej položky: {item_name} (ID: {item_id}) za cenu {item_price} zlata pro hráče {user.username}")
 
 # ZJIŠTĚNÍ JESTLI JE POLOŽKA EQP ABLE NEBO MNATERIAL
     current_item = Player_Items_EQP_ABLE.objects.filter(item_id=item_id, player=player).first() if Player_Items_EQP_ABLE.objects.filter(item_id=item_id, player=player).exists() else None
     current_item = Player_Item_Material.objects.filter(item_id=item_id, player=player).first() if not current_item and Player_Item_Material.objects.filter(item_id=item_id, player=player).exists() else current_item
   
+    amount_before = current_item.amount if current_item else 0
+  
     if not current_item:
         return Response({"error": "Položka nebyla nalezena v inventáři hráče"}, status=status.HTTP_404_NOT_FOUND)
     
     if current_item:
-        gold_plus(user=user, amount=float(item_price))
-        amount_to_sell = current_item.amount
-        print(f"Aktuální množství položky {item_name} (ID: {item_id}) v inventáři hráče {user.username} je {amount_to_sell}")
+        gold_plus(user=user, amount=(float(item_price) * float(amount)))
+        print(f"Aktuální množství položky {item_name} (ID: {item_id}) v inventáři hráče {user.username} je {amount_before}")
     
-        if amount_to_sell > 1:
-            current_item.amount -= 1
-            current_item.save()
-            print(f"Prodej položky: {item_name} (ID: {item_id}) - aktualizováno množství na {amount_to_sell - 1} pro hráče {user.username}")
-        else:
+        if amount_before == 1:
             current_item.delete()
-            print(f"Prodej položky: {item_name} (ID: {item_id}) - položka odstraněna z inventáře hráče {user.username}")
+            print(f"Prodej položky: {item_name} (ID: {item_id}) - všechny položky prodány, položka odstraněna z inventáře hráče {user.username}")
+        elif amount >= amount_before:
+            current_item.delete()
+            print(f"Prodej položky: {item_name} (ID: {item_id}) - všechny položky prodány, položka odstraněna z inventáře hráče {user.username}")
+        else:
+            current_item.amount -= int(amount)
+            current_item.save()
+            print(f"Prodej položky: {item_name} (ID: {item_id}) - množství aktualizováno na {current_item.amount} v inventáři hráče {user.username}")
     
         return Response({"message": f"Úspěšně prodáno: {item_name} za {item_price} zlata"}, status=status.HTTP_200_OK)
     else:
