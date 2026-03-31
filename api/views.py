@@ -26,6 +26,7 @@ from profile_app.register import default_atr, default_hp
 from item_app.item_generator import item_generator_all
 from profile_app.shop import shop_reset
 from fight_app.fight import fight
+from fight_app.loot import loot_created
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -108,6 +109,8 @@ def get_player_profile(request):
         # points
         "atr_points": player.atr_points,   
         "skill_points": player.skill_points,
+        "energy_points": player.energy_points,
+        "energy_points_regen_5_minutes": player.energy_points_regen_5_minutes,
         
         # items
         "all_items_eqp_able": [{
@@ -321,8 +324,8 @@ def init_fight(request):
         enemy_list = [enemy_instance] if enemy_instance else [] # BOSS JE JEN JEDEN
         print(f"NAČÍTÁM ENEMY PRO WORLD BOSS: {enemy_list.count()} příšer načteno pro world bosse s ID {init_base_id}")
 
-    
- # AKTUALIZACE DAT PŘED SOUBOJEM
+# ODEČTENÍ ENERGIE PŘED SOUBOJEM + AKTUALIZACE DAT:
+    player.energy_points -= fight_time_minutes * 1  # Odečteme energii podle času souboje
     player.save()
     
 # ZJIŠTĚNÍ STATŮ KONKRÉTNÍCH MOBEK
@@ -367,6 +370,12 @@ def init_fight(request):
                 end = timezone.now()
                 duration = end - start
                 print(f"Čas ukončení funkce: {end}, Celková doba trvání funkce: {duration}")
+                
+                loot_created(
+                    loot_obtained=all_loot_obtained,
+                    player=player
+                )
+                
                 return Response({"message": "DOŠEL LIMIT ČASU PRO SOUBOJE"}, status=status.HTTP_200_OK)
                 break
             
@@ -382,6 +391,12 @@ def init_fight(request):
                     time_duration_seconds=fight_duration,
                     turn_logs=all_turn_logs  # JSON pole s asynchronními tahy a relativními časy
                 )
+                
+                loot_created(
+                    loot_obtained=all_loot_obtained,
+                    player=player
+                )    
+
                 return Response({"message": "Hráč prohrál souboj. Ukončuji další souboje."}, status=status.HTTP_200_OK)
                 break
 

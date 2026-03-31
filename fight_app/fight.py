@@ -55,7 +55,7 @@ def fight(player, enemy):
             if e_actual_hp <= 0:
                 winner = player.username
                 print(f"{player.username} has defeated {enemy.name}!")
-                all_loot_obtained = loot_generator(player=player, enemy=enemy)
+                all_loot_obtained.extend(loot_generator(player=player, enemy=enemy))
 
                 break
 
@@ -89,7 +89,7 @@ def fight(player, enemy):
             if p_actual_hp <= 0:
                 winner = enemy.name
                 print(f"{enemy.name} has defeated {player.username}!")
-                all_loot_obtained = loot_generator(player=player, enemy=enemy)
+                all_loot_obtained.extend(loot_generator(player=player, enemy=enemy))
                 break
    
     
