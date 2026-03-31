@@ -286,9 +286,6 @@ def shop_refresh(request):
 @permission_classes([IsAuthenticated])
 def init_fight(request):
     print("FIGHT API OK")
-    start = timezone.now()
-    print(f"Čas zahájení funkce: {start}")
-
     
 # NAČTENÍ DAT Z FRONTENDU
     user = request.user # HRÁČ
@@ -297,8 +294,7 @@ def init_fight(request):
     fight_time_minutes = request.data.get('fight_time') # čas souboje v minutách, který posílá frontend
     fight_time_seconds = fight_time_minutes * 60
     
-    
-    print(f"Z FRONTENDU: Hráč: {user}, ID souboje: {init_base_id}, Typ souboje: {fight_type}, Čas souboje: {fight_time_minutes} minut")
+    print(f"Zahajuji souboj pro hráče {user.username} v lokaci s ID {init_base_id} typu {fight_type} na dobu {fight_time_minutes} minut ({fight_time_seconds} sekund).")
     
     if not user:
         return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
@@ -341,7 +337,7 @@ def init_fight(request):
     player.busy_until = timezone.now() + timedelta(minutes=fight_time_minutes)
 
 # ODEČTENÍ ENERGIE PŘED SOUBOJEM + AKTUALIZACE DAT:
-    player.energy_points -= fight_time_minutes * 10  # Uprav si cenu za minutu podle libosti
+    player.energy_points -= fight_time_minutes
     player.save()
     
 # ZJIŠTĚNÍ STATŮ KONKRÉTNÍCH MOBEK
@@ -356,6 +352,8 @@ def init_fight(request):
     all_turn_logs = []
     enemies_defeded = []
     all_loot_obtained = []
+    all_gold_obtained = []
+
     
     fight_start_time = timezone.now()
     wave = 0 # OPRAVA: Přesunuto mimo while cyklus
@@ -365,12 +363,14 @@ def init_fight(request):
             wave += 1
             enemy = all_passible_enemies_stats.filter(id_unique=one_enemy).first()
             
-            # Předpokládám, že funkce fight vrací: current_time, id_unique, turn_logs, winner, loot_obtained
-            current_time, id_unique, turn_logs, winner, loot_obtained = fight(player=player, enemy=enemy, wave=wave)
+            # Předpokládám, že funkce fight vrací: current_time, id_unique, turn_logs, winner, loot_obtained, gold_obtained
+            current_time, id_unique, turn_logs, winner, loot_obtained, gold_obtained = fight(player=player, enemy=enemy, wave=wave)
             
             fight_duration += current_time
             all_turn_logs.extend(turn_logs)
             all_loot_obtained.extend(loot_obtained)
+            all_gold_obtained.extend(gold_obtained)
+
             
             if winner == player.username:
                 enemies_defeded.append(id_unique)
@@ -387,11 +387,9 @@ def init_fight(request):
                     time_duration_seconds=fight_duration,
                     turn_logs=all_turn_logs  # JSON pole s asynchronními tahy a relativními časy
                 )
-                end = timezone.now()
-                duration = end - start
-                print(f"Čas ukončení funkce: {end}, Celková doba trvání funkce: {duration}")
                 
                 loot_created(
+                    gold_obtained=all_gold_obtained,
                     loot_obtained=all_loot_obtained,
                     player=player
                 )
@@ -401,6 +399,7 @@ def init_fight(request):
                     "message": "DOŠEL LIMIT ČASU PRO SOUBOJE",
                     "turn_logs": all_turn_logs,
                     "loot_obtained": all_loot_obtained,
+                    "gold_obtained": all_gold_obtained,
                     "enemies_defeated_count": len(enemies_defeded)
                 }, status=status.HTTP_200_OK)
             
@@ -427,6 +426,7 @@ def init_fight(request):
                     "message": "Hráč prohrál souboj.",
                     "turn_logs": all_turn_logs,
                     "loot_obtained": all_loot_obtained,
+                    "gold_obtained": all_gold_obtained,
                     "enemies_defeated_count": len(enemies_defeded)
                 }, status=status.HTTP_200_OK)
 

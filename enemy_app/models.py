@@ -55,3 +55,13 @@ class loot(models.Model):
     
     def __str__(self):
         return f"{self.enemy.name} - {self.item.name} ({self.drop_rate}% - max {self.drop_max_amount})"
+    
+class loot_gold(models.Model):
+    id_unique = models.AutoField(primary_key=True)
+    enemy = models.ForeignKey(Enemy, on_delete=models.CASCADE, related_name='loot_gold_enemy')
+    drop_rate = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(100)], default=80)
+    drop_min_amount = models.IntegerField(blank=True, null=True, default=1)
+    drop_max_amount = models.IntegerField(blank=True, null=True, default=5)
+    
+    def __str__(self):
+        return f"{self.enemy.name} - Gold ({self.drop_rate}% - {self.drop_min_amount}-{self.drop_max_amount})"

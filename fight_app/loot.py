@@ -1,13 +1,10 @@
-from enemy_app.models import loot
+from enemy_app.models import loot, loot_gold
 import random
 from item_app.item_generator import item_generator_all
 
 
 def loot_generator(player, enemy):
-    print(f"Generuji loot pro nepřítele: {enemy.name} (ID: {enemy.id_unique})")
-    # 1. Získáme loot tabulku pro nepřítele (předpokládám model 'Loot')
-    # select_related('item') načte Item_default, 
-    # prefetch_related načte submodely (weapon_details atd.) v jednom dotazu
+
     possible_loot = loot.objects.filter(enemy=enemy).select_related('item').prefetch_related(
         'item__weapon_details', 
         'item__armor_details', 
@@ -44,19 +41,32 @@ def loot_generator(player, enemy):
                     item_data["price_ks"] = base_item.material_details.price_ks
 
                 loot_obtained.append(item_data)
-                print(f"Získaný loot: {item_data}")
                     
     return loot_obtained
 
     
-def loot_created(loot_obtained, player):
+def loot_created(gold_obtained, loot_obtained, player):
+    print(f"Spouštím GENERÁTOR ITEMŮ pro: {player.username} ...")
     for item in loot_obtained:
         item_satus = "inventory"
         item_base_id = str(item["base_id"])
         item_category = item["category"]
         amount = 1
         item_generator_all(user=player.username, item_status=item_satus, item_base_id=item_base_id, item_category=item_category, amount=amount)
-            
+        
+    print(f"Spouštím GENERÁTOR ZLATA pro: {player.username} ...")
+    if gold_obtained:
+        gold_sum = sum(gold_obtained)
+        player.gold += gold_sum
+    player.save()
 
+
+def loot_gold_generator(enemy):
+    possible_loot_gold = loot_gold.objects.filter(enemy=enemy)
     
-    return loot_obtained
+    gold_obtained = []
+    
+    for i in possible_loot_gold:
+        if random.randint(1, 100) <= i.drop_rate:
+            gold_obtained.append(random.randint(i.drop_min_amount, i.drop_max_amount))     
+    return gold_obtained

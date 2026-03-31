@@ -113,7 +113,7 @@ class Player_info(models.Model):
     
     
     def save(self, *args, **kwargs):
-        
+        print(f"DEBUG: Spouštím save() pro {self.username} ...")
     # PŘI REGISTRACI JE NUTNO PRVNBĚ VŠECHNO ULOŽIT A AŽ PAK SPUSTIT METODU SAVE() ZNOVA
         if self.gender is None or self.role is None:
             super().save(*args, **kwargs)
@@ -136,7 +136,6 @@ class Player_info(models.Model):
         armor_eqp = self.items.filter(category='armor', item_status='equipped').first() # Předpokládáme, že hráč může mít vybavenou pouze jednu zbroj   
         
         if weapon:
-            print("ZBRAŇ: ANO")
             if weapon.dmg_type == 'heavy':
                 dmg_atr = 'str'
             elif weapon.dmg_type == 'light':
@@ -144,13 +143,7 @@ class Player_info(models.Model):
             elif weapon.dmg_type == 'magic':
                 dmg_atr = 'int'
         else:
-            print("ZBRAŇ: NE")
             dmg_atr = 'none'
-            
-        if armor_eqp:
-            print("ARMOR: ANO")
-        else:
-            print("ARMOR: NE")
         
         self.dmg_atr = dmg_atr
         self.dmg_atr_value = getattr(self, f"{self.dmg_atr}_max") if weapon and weapon.dmg_type in ['heavy', 'light', 'magic'] else 1
@@ -159,7 +152,6 @@ class Player_info(models.Model):
         self.dmg_min = round((self.dmg_base * weapon.dmg_min) if weapon else self.dmg_base * 0.8)  
         self.dmg_max = round((self.dmg_base * weapon.dmg_max) if weapon else self.dmg_base * 1.2)  
         self.dmg_avg = round((self.dmg_min + self.dmg_max) // 2)
-        print(f"DEBUG: DMG_base: {self.dmg_base}, DMG_min: {self.dmg_min}, DMG_max: {self.dmg_max}, DMG_avg: {self.dmg_avg} for {self.username}")
         
     # AKTUALIZACE CRITICU
     
@@ -183,8 +175,6 @@ class Player_info(models.Model):
     # AKTUALIZACE ARMORU
         armor_eqp = self.items.filter(category='armor', item_status='equipped').first() or None
         self.armor = armor_eqp.armor if armor_eqp else 0
-        
-        print("SAVE DOKONČEN")
         super().save(*args, **kwargs)
         
         

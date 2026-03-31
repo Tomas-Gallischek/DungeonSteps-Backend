@@ -1,14 +1,12 @@
 from rest_framework.response import Response
 from rest_framework import status
 import random
-from django.utils import timezone
-from .loot import loot_generator
+from .loot import loot_generator, loot_gold_generator
 
 def fight(player, enemy, wave):
     turn_logs = []
     all_loot_obtained = []
-    time_start = timezone.now()
-    print(f"Čas zahájení souboje: {time_start}")
+    all_gold_obtained = []
     
     if not player or not enemy:
         return Response({"error": "Player or Enemy not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -62,8 +60,11 @@ def fight(player, enemy, wave):
             if e_actual_hp <= 0:
                 winner = player.username
                 print(f"{player.username} has defeated {enemy.name}!")
+                
                 all_loot_obtained.extend(loot_generator(player=player, enemy=enemy))
-            get_turn_logs(current_time, enemy.name, player.username, e_actual_hp, p_actual_hp, p_damage_dealt, turn_logs, p_damage_status, enemy.hp_max, player.hp_max, True, False, p_img, e_img, wave, event_type, all_loot_obtained)
+                all_gold_obtained.extend(loot_gold_generator(enemy=enemy))
+                
+            get_turn_logs(current_time, enemy.name, player.username, e_actual_hp, p_actual_hp, p_damage_dealt, turn_logs, p_damage_status, enemy.hp_max, player.hp_max, True, False, p_img, e_img, wave, event_type, all_loot_obtained, all_gold_obtained)
             if e_actual_hp <= 0:
                 break
 
@@ -102,13 +103,13 @@ def fight(player, enemy, wave):
             if p_actual_hp <= 0:
                 winner = enemy.name
                 print(f"{enemy.name} has defeated {player.username}!")
-                all_loot_obtained.extend(loot_generator(player=player, enemy=enemy))
-            get_turn_logs(current_time, player.username, enemy.name, p_actual_hp, e_actual_hp, e_damage_dealt, turn_logs, e_damage_status, player.hp_max, enemy.hp_max, False, True, p_img, e_img, wave, event_type, all_loot_obtained)
+
+            get_turn_logs(current_time, player.username, enemy.name, p_actual_hp, e_actual_hp, e_damage_dealt, turn_logs, e_damage_status, player.hp_max, enemy.hp_max, False, True, p_img, e_img, wave, event_type, all_loot_obtained, all_gold_obtained)
 
             if p_actual_hp <= 0:
                 break
     
-    return current_time, enemy.id_unique, turn_logs, winner, all_loot_obtained
+    return current_time, enemy.id_unique, turn_logs, winner, all_loot_obtained, all_gold_obtained
 
 
 def get_turn_logs(
@@ -128,8 +129,8 @@ def get_turn_logs(
     enemy_img,
     wave,
     event_type,
-    all_loot_obtained
-
+    all_loot_obtained,
+    all_gold_obtained
 ):
 
         turn_logs.extend([{
@@ -152,7 +153,8 @@ def get_turn_logs(
                 "name": item["name"],
                 "amount": item["amount"],
             } for item in all_loot_obtained
-        ]
+        ],
+        "gold_dropped": sum(all_gold_obtained)
     }])
         
     

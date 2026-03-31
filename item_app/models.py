@@ -6,6 +6,7 @@ class Item_default(models.Model):
         ('weapon', 'Weapon'),
         ('armor', 'Armor'),
         ('material', 'Material'),
+        ('gold', 'Gold'),
         ('other', 'Other'),
     ]
     name = models.CharField(max_length=100)
