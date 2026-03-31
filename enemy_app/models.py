@@ -43,7 +43,7 @@ class Enemy(models.Model):
     
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.id_unique})"
 
 class loot(models.Model):
     id_unique = models.AutoField(primary_key=True)

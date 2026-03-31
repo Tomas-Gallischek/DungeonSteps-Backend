@@ -1,16 +1,12 @@
 from rest_framework.response import Response
 from rest_framework import status
-from profile_app.models import Player_info
-from enemy_app.models import Enemy
 import random
 from django.utils import timezone
-from .models import fight_log
 from .loot import loot_generator
 
-def fight(player, enemy_init_name):
+def fight(player, enemy):
     turn_logs = []
-    player = Player_info.objects.filter(username=player).first()
-    enemy = Enemy.objects.filter(init_name=enemy_init_name).first()
+    all_loot_obtained = []
     time_start = timezone.now()
     print(f"Čas zahájení souboje: {time_start}")
     
@@ -30,7 +26,7 @@ def fight(player, enemy_init_name):
     while e_actual_hp > 0 and p_actual_hp > 0:
         current_time = min(p_next_attack, e_next_attack)
         
-        # --- HRÁČ ---
+    # --- HRÁČ ---
         
         # --- ÚTOK ---
         if current_time == p_next_attack:
@@ -54,16 +50,16 @@ def fight(player, enemy_init_name):
         
         # --- KONEC ZÁPASU A ZÁPIS DO DATABÁZE ---
             e_actual_hp -= p_damage_dealt
-            get_fight_logs(current_time, enemy.name, player.username, e_actual_hp, p_actual_hp, p_damage_dealt, turn_logs, p_damage_status) 
+            get_turn_logs(current_time, enemy.name, player.username, e_actual_hp, p_actual_hp, p_damage_dealt, turn_logs, p_damage_status) 
             p_next_attack += p_speed
             if e_actual_hp <= 0:
                 winner = player.username
                 print(f"{player.username} has defeated {enemy.name}!")
-                loot_generator(player=player, enemy=enemy)
+                all_loot_obtained = loot_generator(player=player, enemy=enemy)
 
                 break
 
-        # --- ENEMY ---
+    # --- ENEMY ---
         
         # --- ÚTOK---
         if current_time == e_next_attack:
@@ -88,35 +84,22 @@ def fight(player, enemy_init_name):
         
         # --- KONEC ZÁPASU A ZÁPIS DO DATABÁZE ---
             p_actual_hp -= e_damage_dealt
-            get_fight_logs(current_time, player.username, enemy.name, p_actual_hp, e_actual_hp, e_damage_dealt, turn_logs, e_damage_status) 
+            get_turn_logs(current_time, player.username, enemy.name, p_actual_hp, e_actual_hp, e_damage_dealt, turn_logs, e_damage_status) 
             e_next_attack += e_speed
             if p_actual_hp <= 0:
                 winner = enemy.name
                 print(f"{enemy.name} has defeated {player.username}!")
-                loot_generator(player=player, enemy=enemy)
+                all_loot_obtained = loot_generator(player=player, enemy=enemy)
                 break
-
-    # UKONČENÍ SOUBOJE A ULOŽENÍ LOGU
-    time_end = timezone.now()
+   
     
-    fight_log.objects.create(
-        player=player,
-        enemy=enemy,
-        winner=winner,
-        time_start=time_start,
-        time_end=time_end,
-        turn_logs=turn_logs  # JSON pole s asynchronními tahy a relativními časy
-    )
     
-    result = winner
-    
-    return result
+    return current_time, enemy.id_unique, turn_logs, winner, all_loot_obtained
 
 
-def get_fight_logs(current_time, defender, attacker, defender_actual_hp, attacker_actual_hp, damage_dealt, turn_logs, damage_status):
+def get_turn_logs(current_time, defender, attacker, defender_actual_hp, attacker_actual_hp, damage_dealt, turn_logs, damage_status):
 
-        print(f"Čas: {current_time:.2f}s | Útočník: {attacker} | Obránce: {defender} | Poškození: {damage_dealt} ({damage_status}) | HP obránce: {max(0, defender_actual_hp)} | HP útočníka: {max(0, attacker_actual_hp)}")
-        turn_logs.append({
+        turn_logs.extend([{
         "time_offset": round(current_time, 2),
         "attacker": str(attacker),
         "defender": str(defender),
@@ -124,7 +107,7 @@ def get_fight_logs(current_time, defender, attacker, defender_actual_hp, attacke
         "damage_status": damage_status,
         "defender_hp": max(0, defender_actual_hp),
         "attacker_hp": max(0, attacker_actual_hp)
-    })
+    }])
         
     
         

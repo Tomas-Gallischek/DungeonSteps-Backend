@@ -7,6 +7,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
 import random
 
 
@@ -14,8 +15,9 @@ import random
 # NAČÍTÁNÍ MODELU
 from profile_app.models import Player_info, Player_Items_EQP_ABLE, Player_Item_Material
 from item_app.models import Item_default
-from map_app.models import Dungeon
+from map_app.models import Dungeon, Void, WorldBoss
 from enemy_app.models import Enemy
+from fight_app.models import fight_log
 
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
@@ -277,39 +279,113 @@ def shop_refresh(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def init_fight(request):
+    print("FIGHT API OK")
+    start = timezone.now()
+    print(f"Čas zahájení funkce: {start}")
     
 # NAČTENÍ DAT Z FRONTENDU
-    user = request.user
-    player = Player_info.objects.filter(username=user).first()
+    user = request.user # HRÁČ
+    init_base_id = request.data.get('init_base_id') # ID dungeonu/voidu/world bosse
+    fight_type = request.data.get('fight_type') # typ souboje: "dungeon", "void" nebo "world_boss"
+    fight_time_minutes = request.data.get('fight_time') # čas souboje v minutách, který posílá frontend
+    fight_time_seconds = fight_time_minutes * 60
     
-    dungeon_base_id = request.data.get('dungeon_base_id')
-    dungeon = Dungeon.objects.filter(dungeon_base_id=dungeon_base_id).first() if Dungeon.objects.filter(dungeon_base_id=dungeon_base_id).exists() else None
-    
-    enemy_init_name = dungeon.enemies.first().name if dungeon and dungeon.enemies.exists() else None
-
-    print(f"Inicializuji souboj pro hráče {user.username} v dungeonu {dungeon.name if dungeon else 'Neznámý dungeon'} proti nepříteli {enemy_init_name}")
+    print(f"Z FRONTENDU: Hráč: {user}, ID souboje: {init_base_id}, Typ souboje: {fight_type}, Čas souboje: {fight_time_minutes} minut")
     
     if not user:
         return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+    if not init_base_id or not fight_type:
+        return Response({"error": "Chybí informace o souboji"}, status=status.HTTP_400_BAD_REQUEST)
+    if fight_type not in ["dungeon", "void", "world_boss"]:
+        return Response({"error": "Neplatný typ souboje"}, status=status.HTTP_400_BAD_REQUEST)
+    if fight_time_minutes is None or not isinstance(fight_time_minutes, (int, float)) or fight_time_minutes <= 0:
+        return Response({"error": "Neplatný čas souboje"}, status=status.HTTP_400_BAD_REQUEST)
     
-    if not enemy_init_name:
-        return Response({"error": "Nepřítel nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+# identifikace
+    player = Player_info.objects.filter(username=user).first()
+    
+    if fight_type == "dungeon":
+        enemy_instance = Dungeon.objects.filter(dungeon_base_id=init_base_id).first() if Dungeon.objects.filter(dungeon_base_id=init_base_id).exists() else None
+        enemy_list = enemy_instance.enemies.all() if enemy_instance else []
+        print(f"NAČÍTÁM ENEMY PRO DUNGEON: {enemy_list.count()} příšer načteno pro dungeon s ID {init_base_id}")
+        
+    if fight_type == "void":
+        enemy_instance = Void.objects.filter(void_base_id=init_base_id).first() if Void.objects.filter(void_base_id=init_base_id).exists() else None
+        enemy_list = enemy_instance.enemies.all() if enemy_instance else []
+        void = enemy_instance
+        print(f"NAČÍTÁM ENEMY PRO VOID: {void} {enemy_list.count()} příšer načteno pro void s ID {init_base_id}")
+        
+    if fight_type == "world_boss":
+        enemy_instance = WorldBoss.objects.filter(world_boss_base_id=init_base_id).first() if WorldBoss.objects.filter(world_boss_base_id=init_base_id).exists() else None
+        enemy_list = [enemy_instance] if enemy_instance else [] # BOSS JE JEN JEDEN
+        print(f"NAČÍTÁM ENEMY PRO WORLD BOSS: {enemy_list.count()} příšer načteno pro world bosse s ID {init_base_id}")
 
     
-# AKTUALIZACE DAT PŘED SOUBOJEM
+ # AKTUALIZACE DAT PŘED SOUBOJEM
     player.save()
     
-# SPECIFIKA PRO DUNGEONY:
-    enemy = Enemy.objects.filter(init_name=enemy_init_name).first() if Enemy.objects.filter(init_name=enemy_init_name).exists() else None
+# ZJIŠTĚNÍ STATŮ KONKRÉTNÍCH MOBEK
+    passible_enemies_id = []
+    for one_enemy in enemy_list:
+        passible_enemies_id.append(one_enemy.id_unique)
+    
+    all_passible_enemies_stats = Enemy.objects.filter(id_unique__in=passible_enemies_id)
+    enemy_range_id = all_passible_enemies_stats.values_list('id_unique', flat=True)
+    
+    fight_duration = 0 # SEKUNDY
+    all_turn_logs = []
+    enemies_defeded = []
+    all_loot_obtained = []
+    
+    while fight_duration < fight_time_seconds:
+        fight_start_time = timezone.now()
+        for one_enemy in random.sample(list(enemy_range_id), len(enemy_range_id)):
+            enemy = all_passible_enemies_stats.filter(id_unique=one_enemy).first()
+            current_time, id_unique, turn_logs, winner, all_loot_obtained = fight(player=player, enemy=enemy)
+            
+            fight_duration += current_time
+            all_turn_logs.extend(turn_logs)
+            all_loot_obtained.extend(all_loot_obtained)
+            if winner == player.username:
+                enemies_defeded.append(id_unique)
+            else:
+                pass
+            
+# ČASOVÉ OMEZENÍ SOUBOJE:
+            if fight_duration >= fight_time_seconds:
+                print("Dosaženo limitu času pro souboje. Ukončuji další souboje.")
+                fight_log.objects.create(
+                    player=player,
+                    all_enemies_defeded=enemies_defeded,
+                    defeinitive_winner=player.username,
+                    time_start=fight_start_time, 
+                    time_end=timezone.now(),
+                    time_duration_seconds=fight_duration,
+                    turn_logs=all_turn_logs  # JSON pole s asynchronními tahy a relativními časy
+                )
+                end = timezone.now()
+                duration = end - start
+                print(f"Čas ukončení funkce: {end}, Celková doba trvání funkce: {duration}")
+                return Response({"message": "DOŠEL LIMIT ČASU PRO SOUBOJE"}, status=status.HTTP_200_OK)
+                break
+            
+# HRÁČ PROHRÁL:
+            if winner != player.username:
+                print("Hráč prohrál souboj. Ukončuji další souboje.")
+                fight_log.objects.create(
+                    player=player,
+                    all_enemies_defeded=enemies_defeded,
+                    defeinitive_winner="mobs",
+                    time_start=fight_start_time, 
+                    time_end=timezone.now(),
+                    time_duration_seconds=fight_duration,
+                    turn_logs=all_turn_logs  # JSON pole s asynchronními tahy a relativními časy
+                )
+                return Response({"message": "Hráč prohrál souboj. Ukončuji další souboje."}, status=status.HTTP_200_OK)
+                break
 
     
-    
-# ZAVOLÁNÍ FUNKCE PRO SOUBOJ
-    result = fight(player=user, enemy_init_name=enemy.init_name) if enemy else None
-    
-    
-# VRÁCENÍ VÝSLEDKU FRONTENDU
-    return Response({"message": f"Výsledek souboje: {result}"}, status=status.HTTP_200_OK)
 
 # ZVYŠOVÁNÍ STATŮ
 @api_view(['POST'])

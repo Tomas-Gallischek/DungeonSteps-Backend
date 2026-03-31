@@ -32,6 +32,8 @@ class Player_info(models.Model):
 # POINTS
     atr_points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     skill_points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    energy_points = models.IntegerField(default=200, validators=[MinValueValidator(0), MaxValueValidator(200)])
+    energy_points_regen_5_minutes = models.IntegerField(default=5, validators=[MinValueValidator(0), MaxValueValidator(10)])
 
 # KROKY
     steps = models.IntegerField(default=0, validators=[MinValueValidator(0)])

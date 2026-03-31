@@ -107,12 +107,11 @@ def item_generator_all(user, item_status, item_base_id, item_category, amount):
     elif item.category == "material":
         # Pokud hráč již má tento materiál, aktualizujeme množství, jinak vytvoříme nový záznam
         if Player_Item_Material.objects.filter(player=player, item_base_id=item_base_id).exists():
-            print("Hráč již má tento materiál, aktualizuji množství.")
+
             existing_item = Player_Item_Material.objects.get(player=player, item_base_id=item_base_id)
             existing_item.amount += amount
             existing_item.save()
         else:
-            print("Hráč tento materiál ještě nemá, vytvářím nový záznam.")
             Player_Item_Material.objects.create(
                 player=player,
                 item_base_id=item_base_id,
@@ -136,7 +135,7 @@ def item_generator_all(user, item_status, item_base_id, item_category, amount):
     
 # PODPŮRNÉ FUNKCE    
 def armor_generator(player_lvl, item_armor_base):
-    print("spuštění generátoru brnění")
+
     
     lvl_multiplier = player_lvl/10 # lvl 15 = 1.5
     random_factor_avg = random.uniform(0.9, 1.1) # náhodný faktro pro generování obrany (±10%)
@@ -145,7 +144,7 @@ def armor_generator(player_lvl, item_armor_base):
     return armor
 
 def weapon_generator(player_lvl, item_dmg_base):
-    print("spuštění generátoru zbraní")
+
 
     lvl_multiplier = player_lvl/10 # lvl 15 = 1.5
     
@@ -161,7 +160,6 @@ def weapon_generator(player_lvl, item_dmg_base):
     return dmg_min, dmg_max, dmg_avg
 
 def rarity_generator(player_lvl):
-    print("spuštění generátoru rarity")
     
     rarity_koef = player_lvl * 2
     rarity_roll = random.randint(1,rarity_koef)
@@ -179,7 +177,6 @@ def rarity_generator(player_lvl):
 
 
 def price_generator(item, rarity, player_lvl, amount):
-    print("spuštění generátoru ceny")
     
     if item.category == "material":
         return (item.material_details.price_ks), (item.material_details.price_ks * amount)
