@@ -25,9 +25,10 @@ class Enemy(models.Model):
     lvl = models.IntegerField(blank=True, null=True)
     category = models.CharField(max_length=100, choices=CATEGORY_CHOICES, blank=True, null=True)
     spawn_option = models.BooleanField(blank=True, null=True)
+    enemy_img_ozn = models.CharField(max_length=100, blank=True, null=True)
     
 # STATY
-    hp = models.IntegerField(blank=True, null=True)
+    hp_max = models.IntegerField(blank=True, null=True)
     hp_regen_5s = models.FloatField(blank=True, null=True)
     hp_actual = models.IntegerField(default=1, blank=True) # <-- Aktuální HP, které se mění během boje, ale neovlivňuje max HP
     str_resist = models.FloatField(blank=True, null=True, default=5, validators=[MinValueValidator(0), MaxValueValidator(50)])

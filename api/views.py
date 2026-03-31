@@ -322,10 +322,14 @@ def init_fight(request):
     if fight_type == "world_boss":
         enemy_instance = WorldBoss.objects.filter(world_boss_base_id=init_base_id).first() if WorldBoss.objects.filter(world_boss_base_id=init_base_id).exists() else None
         enemy_list = [enemy_instance] if enemy_instance else [] # BOSS JE JEN JEDEN
-        print(f"NAČÍTÁM ENEMY PRO WORLD BOSS: {enemy_list.count()} příšer načteno pro world bosse s ID {init_base_id}")
+        print(f"NAČÍTÁM ENEMY PRO WORLD BOSS: len({enemy_list}) příšer načteno pro world bosse s ID {init_base_id}")
+
+# OCHRANA PROTI NEKONEČNÉMU CYKLU
+    if not enemy_list:
+        return Response({"error": "V této lokaci nejsou žádní nepřátelé!"}, status=status.HTTP_400_BAD_REQUEST)
 
 # ODEČTENÍ ENERGIE PŘED SOUBOJEM + AKTUALIZACE DAT:
-    player.energy_points -= fight_time_minutes * 1  # Odečteme energii podle času souboje
+    player.energy_points -= fight_time_minutes * 10  # Uprav si cenu za minutu podle libosti
     player.save()
     
 # ZJIŠTĚNÍ STATŮ KONKRÉTNÍCH MOBEK
@@ -334,26 +338,30 @@ def init_fight(request):
         passible_enemies_id.append(one_enemy.id_unique)
     
     all_passible_enemies_stats = Enemy.objects.filter(id_unique__in=passible_enemies_id)
-    enemy_range_id = all_passible_enemies_stats.values_list('id_unique', flat=True)
+    enemy_range_id = list(all_passible_enemies_stats.values_list('id_unique', flat=True))
     
     fight_duration = 0 # SEKUNDY
     all_turn_logs = []
     enemies_defeded = []
     all_loot_obtained = []
     
+    fight_start_time = timezone.now()
+    wave = 0 # OPRAVA: Přesunuto mimo while cyklus
+    
     while fight_duration < fight_time_seconds:
-        fight_start_time = timezone.now()
-        for one_enemy in random.sample(list(enemy_range_id), len(enemy_range_id)):
+        for one_enemy in random.sample(enemy_range_id, len(enemy_range_id)):
+            wave += 1
             enemy = all_passible_enemies_stats.filter(id_unique=one_enemy).first()
-            current_time, id_unique, turn_logs, winner, all_loot_obtained = fight(player=player, enemy=enemy)
+            
+            # Předpokládám, že funkce fight vrací: current_time, id_unique, turn_logs, winner, loot_obtained
+            current_time, id_unique, turn_logs, winner, loot_obtained = fight(player=player, enemy=enemy, wave=wave)
             
             fight_duration += current_time
             all_turn_logs.extend(turn_logs)
-            all_loot_obtained.extend(all_loot_obtained)
+            all_loot_obtained.extend(loot_obtained)
+            
             if winner == player.username:
                 enemies_defeded.append(id_unique)
-            else:
-                pass
             
 # ČASOVÉ OMEZENÍ SOUBOJE:
             if fight_duration >= fight_time_seconds:
@@ -376,8 +384,13 @@ def init_fight(request):
                     player=player
                 )
                 
-                return Response({"message": "DOŠEL LIMIT ČASU PRO SOUBOJE"}, status=status.HTTP_200_OK)
-                break
+                # OPRAVA: Vracíme data frontendu
+                return Response({
+                    "message": "DOŠEL LIMIT ČASU PRO SOUBOJE",
+                    "turn_logs": all_turn_logs,
+                    "loot_obtained": all_loot_obtained,
+                    "enemies_defeated_count": len(enemies_defeded)
+                }, status=status.HTTP_200_OK)
             
 # HRÁČ PROHRÁL:
             if winner != player.username:
@@ -397,8 +410,13 @@ def init_fight(request):
                     player=player
                 )    
 
-                return Response({"message": "Hráč prohrál souboj. Ukončuji další souboje."}, status=status.HTTP_200_OK)
-                break
+                # OPRAVA: Vracíme data frontendu
+                return Response({
+                    "message": "Hráč prohrál souboj.",
+                    "turn_logs": all_turn_logs,
+                    "loot_obtained": all_loot_obtained,
+                    "enemies_defeated_count": len(enemies_defeded)
+                }, status=status.HTTP_200_OK)
 
     
 
