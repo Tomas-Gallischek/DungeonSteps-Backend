@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+
 
 
 class Player_info(models.Model):
@@ -24,6 +26,18 @@ class Player_info(models.Model):
     xp = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     xp_next_lvl = models.IntegerField(default=8000, validators=[MinValueValidator(1)])
     gold = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+
+# STAVY
+
+# STAV HRÁČE
+    busy_until = models.DateTimeField(null=True, blank=True, help_text="Čas, dokdy je hráč na výpravě nebo v s  ouboji.")
+
+    @property
+    def is_busy(self):
+        """Vrátí True, pokud je hráč aktuálně na výpravě (čas busy_until ještě nevypršel)."""
+        if self.busy_until and self.busy_until > timezone.now():
+            return True
+        return False
 
 # OBRÁZKY
     avatar_img_ozn = models.CharField(default='avatar_default', max_length=100, null=True, blank=True)

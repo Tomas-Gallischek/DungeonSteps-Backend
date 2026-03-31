@@ -9,6 +9,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 import random
+from datetime import timedelta
+
 
 
 
@@ -89,6 +91,7 @@ def get_player_profile(request):
         "gold": player.gold,
         "role": player.role,
         "avatar_img_ozn": player.avatar_img_ozn,
+        "busy_until": player.busy_until,
         
         # atributes
         "str_max": player.str_max,
@@ -285,6 +288,7 @@ def init_fight(request):
     print("FIGHT API OK")
     start = timezone.now()
     print(f"Čas zahájení funkce: {start}")
+
     
 # NAČTENÍ DAT Z FRONTENDU
     user = request.user # HRÁČ
@@ -292,6 +296,7 @@ def init_fight(request):
     fight_type = request.data.get('fight_type') # typ souboje: "dungeon", "void" nebo "world_boss"
     fight_time_minutes = request.data.get('fight_time') # čas souboje v minutách, který posílá frontend
     fight_time_seconds = fight_time_minutes * 60
+    
     
     print(f"Z FRONTENDU: Hráč: {user}, ID souboje: {init_base_id}, Typ souboje: {fight_type}, Čas souboje: {fight_time_minutes} minut")
     
@@ -327,6 +332,13 @@ def init_fight(request):
 # OCHRANA PROTI NEKONEČNÉMU CYKLU
     if not enemy_list:
         return Response({"error": "V této lokaci nejsou žádní nepřátelé!"}, status=status.HTTP_400_BAD_REQUEST)
+
+# KONTROLA ZANEPRÁZDNĚNÍ HRÁČE
+
+    if player.is_busy:
+        return Response({"error": "Hráč je momentálně na jiné výpravě!"}, status=status.HTTP_400_BAD_REQUEST)
+
+    player.busy_until = timezone.now() + timedelta(minutes=fight_time_minutes)
 
 # ODEČTENÍ ENERGIE PŘED SOUBOJEM + AKTUALIZACE DAT:
     player.energy_points -= fight_time_minutes * 10  # Uprav si cenu za minutu podle libosti
