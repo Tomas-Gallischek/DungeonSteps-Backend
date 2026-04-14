@@ -16,19 +16,19 @@ def item_generator_all(user, item_status, item_base_id, amount):
     
     if item_category == "weapon":
         item = Item_default.objects.select_related('weapon_details').get(item_base_id=item_base_id)
-        dmg_type = item.weapon_details.dmg_type
+        dmg_type = item.weapon_details.dmg_type if item.weapon_details.dmg_type else "None"
         
     elif item_category == "armor":
         item = Item_default.objects.select_related('armor_details').get(item_base_id=item_base_id)
-        dmg_type = item.armor_details.dmg_type
+        dmg_type = item.armor_details.dmg_type if item.armor_details.dmg_type else "None"
         
     elif item_category == "helmet":
         item = Item_default.objects.select_related('helmet_details').get(item_base_id=item_base_id)
-        dmg_type = item.helmet_details.dmg_type
+        dmg_type = item.helmet_details.dmg_type if item.helmet_details.dmg_type else "None"
 
     elif item_category == "boots":
         item = Item_default.objects.select_related('boots_details').get(item_base_id=item_base_id)
-        dmg_type = item.boots_details.dmg_type
+        dmg_type = item.boots_details.dmg_type if item.boots_details.dmg_type else "None"
 
     elif item_category == "amulet":
         item = Item_default.objects.select_related('amulet_details').get(item_base_id=item_base_id)
@@ -82,7 +82,7 @@ def item_generator_all(user, item_status, item_base_id, amount):
 # SPECIÁLNĚ PRO BRNĚNÍ:
 
     if item.category == "armor":
-        attack_speed_armor = random.uniform(item.armor_details.min_minus_attack_speed, item.armor_details.max_minus_attack_speed) if item.armor_details.max_minus_attack_speed else None
+        attack_speed_armor = round(random.uniform(item.armor_details.min_minus_attack_speed, item.armor_details.max_minus_attack_speed) if item.armor_details.max_minus_attack_speed else None, 2)
         armor_hp_bonus = item.armor_details.plus_hp if item.armor_details.plus_hp else 0
     else:
         attack_speed_armor = None

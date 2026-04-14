@@ -144,12 +144,14 @@ class Player_info(models.Model):
               
             
 # NAČTENÍ VŠECH BONUSŮ Z VYBAVENÍ
-        self.str_eqp = sum(item.item_bonus.get('str', 0) for item in self.items.filter(item_status='equipped'))
-        self.dex_eqp = sum(item.item_bonus.get('dex', 0) for item in self.items.filter(item_status='equipped'))
-        self.int_eqp = sum(item.item_bonus.get('int', 0) for item in self.items.filter(item_status='equipped'))
-        self.vit_eqp = sum(item.item_bonus.get('vit', 0) for item in self.items.filter(item_status='equipped'))
-        self.luck_eqp = sum(item.item_bonus.get('luck', 0) for item in self.items.filter(item_status='equipped'))
-                                 
+        equipped_items = list(self.items.filter(item_status='equipped'))
+
+        self.str_eqp = sum(item.item_bonus.get('str', 0) for item in equipped_items)
+        self.dex_eqp = sum(item.item_bonus.get('dex', 0) for item in equipped_items)
+        self.int_eqp = sum(item.item_bonus.get('int', 0) for item in equipped_items)
+        self.vit_eqp = sum(item.item_bonus.get('vit', 0) for item in equipped_items)
+        self.luck_eqp = sum(item.item_bonus.get('luck', 0) for item in equipped_items)
+                                        
 # PETI        
         if pet_eqp:
             pet_lvl = pet_eqp.pet_lvl if pet_eqp.pet_lvl else 1
@@ -172,11 +174,11 @@ class Player_info(models.Model):
             self.vit_eqp += round(amulet_eqp.all_atr_bonus_amulet * self.vit_base)
             self.luck_eqp += round(amulet_eqp.all_atr_bonus_amulet * self.luck_base)
         else:
-                self.str_eqp += 0
-                self.dex_eqp += 0
-                self.int_eqp += 0
-                self.vit_eqp += 0
-                self.luck_eqp += 0
+            self.str_eqp += 0
+            self.dex_eqp += 0
+            self.int_eqp += 0
+            self.vit_eqp += 0
+            self.luck_eqp += 0
         
         if ring_eqp:
             self.str_eqp += round(ring_eqp.all_atr_bonus_ring * self.str_base)
@@ -272,6 +274,8 @@ class Player_info(models.Model):
         if self.int_resist > 50:
             self.int_resist = 50
             
+        super().save(*args, **kwargs)
+            
             
     def atr_up(self, updates):
         print(f"DEBUG: Starting attribute update for {self.username} with updates: {updates}")   
@@ -284,20 +288,15 @@ class Player_info(models.Model):
             atr_name = atr_name.lower()
             
             if atr_name == 'str':
-                for i in range(amount):
-                    self.str_stats += 1
+                self.str_stats += amount
             elif atr_name == 'dex':
-                for i in range(amount):
-                    self.dex_stats += 1
+                self.dex_stats += amount
             elif atr_name == 'int':
-                for i in range(amount):
-                    self.int_stats += 1
+                self.int_stats += amount
             elif atr_name == 'luck':
-                for i in range(amount):
-                    self.luck_stats += 1
+                self.luck_stats += amount
             elif atr_name == 'vit':
-                for _ in range(amount):
-                    self.vit_stats += 1
+                self.vit_stats += amount
             else:
                 continue
                 
@@ -331,7 +330,7 @@ class Player_Items_EQP_ABLE(models.Model):
     
     STATUS_CHOICES = [
         ('equipped', 'Equipped'),
-        ('inventary', 'Inventory'),
+        ('inventory', 'Inventory'),
         ('shop', 'Shop'),
         ('drop', 'Drop'),
         ('none', 'None'),
@@ -352,7 +351,7 @@ class Player_Items_EQP_ABLE(models.Model):
     name = models.CharField(max_length=255, null=True, blank=True)
     description = models.CharField(max_length=255, null=True, blank=True) 
     item_img_ozn = models.CharField(default='item_default', max_length=100, null=True, blank=True) # odkaz na obrázek itemu, může být null pro unikátní předměty vytvořené jen pro hráče
-    item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inventary')
+    item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inventory')
     stack_able = models.BooleanField(default=False)
     
     amount = models.IntegerField(default=1)
@@ -362,8 +361,8 @@ class Player_Items_EQP_ABLE(models.Model):
     
     rarity = models.CharField(null=True, blank=True, max_length=20, choices=RARITY_CHOICES)
     item_bonusy = models.JSONField(null=True, blank=True, default=dict)  # Ukládá bonusy z předmětu jako JSON
-    price_ks = models.FloatField(null=True, blank=True, validators=[MinValueValidator(1)], default=0.1)
-    price_all = models.FloatField(null=True, blank=True, validators=[MinValueValidator(1)], default=0.1)
+    price_ks = models.FloatField(null=True, blank=True, default=0.1)
+    price_all = models.FloatField(null=True, blank=True, default=0.1)
     
     armor = models.IntegerField(null=True, blank=True)
     dmg_type = models.CharField(null=True, blank=True, max_length=50, choices=DMG_TYPE_CHOICES)
@@ -427,7 +426,7 @@ class Player_Item_Material(models.Model):
     
     STATUS_CHOICES = [
         ('equipped', 'Equipped'),
-        ('inventary', 'Inventory'),
+        ('inventory', 'Inventory'),
         ('shop', 'Shop'),
         ('drop', 'Drop'),
         ('none', 'None'),
@@ -442,14 +441,14 @@ class Player_Item_Material(models.Model):
     ]
     
     player = models.ForeignKey(Player_info, on_delete=models.CASCADE, related_name='materials')
-    item_id = item_id = models.AutoField(primary_key=True, unique=True)
+    item_id = models.AutoField(primary_key=True, unique=True)
     item_base_id = models.IntegerField(blank=True, null=True) # odkaz na základní item pro případ upgradu a generování, může být null pro unikátní předměty vytvořené jen pro hráče
     name = models.CharField(max_length=255, null=True, blank=True)
     description = models.CharField(max_length=255, null=True, blank=True)
     item_img_ozn = models.CharField(default='item_default', max_length=100, null=True, blank=True) # odkaz na obrázek itemu, může být null pro unikátní předměty vytvořené jen pro hráče
     category = models.CharField(max_length=50, null=True, blank=True, choices=CATEGORY_CHOICES, default='material')
     
-    item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inventary')
+    item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inventory')
     amount = models.IntegerField(default=1)
 
     lvl_req = models.IntegerField(null=True, blank=True, default=1)
