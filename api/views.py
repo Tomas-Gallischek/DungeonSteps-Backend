@@ -71,7 +71,7 @@ def get_shop(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_player_profile(request):    
+def get_profile(request):    
     user = request.user
     player = Player_info.objects.filter(username=user).first()
     all_items_eqp_able = Player_Items_EQP_ABLE.objects.all().filter(player=player)  # Získáme všechny vybavitelné položky patřící hráči
