@@ -86,72 +86,109 @@ def get_player_profile(request):
         
         # base info
         "username": user.username,
+        "gender": player.gender,
+        "role": player.role,
         "lvl": player.lvl,
         "xp": player.xp,
+        "xp_next_lvl": player.xp_next_lvl,
         "gold": player.gold,
-        "role": player.role,
+        "dungeon_tokens": player.dungeon_tokens,
+        
+        # obrázky
         "avatar_img_ozn": player.avatar_img_ozn,
         "busy_until": player.busy_until,
         
+        # points
+        "atr_points": player.atr_points,   
+        "skill_points": player.skill_points,
+        "energy_points": player.energy_points,
+        
+        # steps
+        "steps": player.steps,
+        "steps_today": player.steps_today,
+        
+        # HP
+        "hp_max": player.hp_max,
+        
         # atributes
+        "dmg_atr": player.dmg_atr,
+        "dmg_atr_value": player.dmg_atr_value,
         "str_max": player.str_max,
         "dex_max": player.dex_max,
         "int_max": player.int_max,
         "vit_max": player.vit_max,
         "luck_max": player.luck_max,
         
-        # HP
-        "hp_base": player.hp_base,
-        "hp_stats": player.hp_stats,
-        "hp_lvl": player.hp_lvl,
-        "hp_eqp": player.hp_eqp,
-        "hp_max": player.hp_max,
-        "hp_vit_koef": player.hp_vit_koef,
-        "hp_lvl_koef": player.hp_lvl_koef,
+        #boj
+        "dmg_min": player.dmg_min,
+        "dmg_max": player.dmg_max,
+        "attack_speed": player.attack_speed,
+        "crit_chance": player.crit_chance,
+        "crit_multiplier": player.crit_multiplier,
+        "armor": player.armor,
+        "str_resist": player.str_resist,
+        "dex_resist": player.dex_resist,
+        "int_resist": player.int_resist,
         
-        # points
-        "atr_points": player.atr_points,   
-        "skill_points": player.skill_points,
-        "energy_points": player.energy_points,
-        "energy_points_regen_5_minutes": player.energy_points_regen_5_minutes,
         
         # items
         "all_items_eqp_able": [{
-            "player": user.username,
-            "item_id": item.item_id,
-            "item_img_ozn": item.item_img_ozn,
+            
+        # OBECNÉ
             "item_base_id": item.item_base_id,
-            "item_status": item.item_status,
-            "amount": item.amount,
             "name": item.name,
             "description": item.description,
+            "item_img_ozn": item.item_img_ozn,
+            "item_status": item.item_status,
+            "amount": item.amount,
             "category": item.category,
-            "dmg_type": item.dmg_type,
             "lvl_req": item.lvl_req,
             "rarity": item.rarity,
+            "item_bonusy": item.item_bonusy,
             "price_ks": item.price_ks,
             "price_all": item.price_all,
+            "armor": item.armor,
+            "dmg_type": item.dmg_type,
+        # ÚTOK
             "dmg_min": item.dmg_min,
             "dmg_max": item.dmg_max,
             "dmg_avg": item.dmg_avg,
-            "armor": item.armor,
-            "item_bonus": item.item_bonus,
+            "attack_speed_weapon": item.attack_speed_weapon,
+            "attack_speed_armor": item.attack_speed_armor,
+            "attack_speed_helmet": item.attack_speed_helmet,
+            "attack_speed_boots": item.attack_speed_boots,
+        # ARMOR HP
+            "plus_hp": item.plus_hp,
+        # AMULETY A PRSTENY
+            "all_atr_bonus_amulet": item.all_atr_bonus_amulet,
+            "all_atr_bonus_ring": item.all_atr_bonus_ring,
+        # TALISMANY
+            "talisman_bonus_name": item.talisman_bonus_name,
+            "talisman_bonus_type": item.talisman_bonus_type,
+            "talisman_bonus_value": item.talisman_bonus_value,
+        # PETI
+            "pet_lvl": item.pet_lvl,
+            "pet_armor_bonus": item.pet_armor_bonus,
+            "pet_dmg_bonus": item.pet_dmg_bonus,
+            "pet_hp_bonus": item.pet_hp_bonus,
+            "pet_prum_skoda_bonus": item.pet_prum_skoda_bonus,
+            
         } for item in all_items_eqp_able],
         
         "all_items_material": [{
-            "player": user.username,
-            "item_id": item.item_id,
-            "item_img_ozn": item.item_img_ozn,
+
             "item_base_id": item.item_base_id,
-            "item_status": item.item_status,
-            "amount": item.amount,
             "name": item.name,
             "description": item.description,
+            "item_img_ozn": item.item_img_ozn,
             "category": item.category,
+            "item_status": item.item_status,
+            "amount": item.amount,
             "lvl_req": item.lvl_req,
             "rarity": item.rarity,
             "price_ks": item.price_ks,
             "price_all": item.price_all,
+            "stackable": item.stackable,
         } for item in all_items_material],
         
     }, status=status.HTTP_200_OK)
@@ -559,10 +596,10 @@ def registrace(request):
     default_atr(user=user, role=role)
     
     # přiřazení základní výbavy
-    items_id = [1,2]
-    item_category = ["weapon", "armor"]
-    for i, category in zip(items_id, item_category):
-        item_generator_all(user=user, item_status="inventory", item_base_id=i, item_category=category, amount=1)
+
+    items_id = [1401,2401] #<-- REZAVÝ NŮŽ + KOŠILE
+    for i in items_id:
+        item_generator_all(user=user, item_status="inventory", item_base_id=i, amount=1)
     
 # Vytvoření tokenu pro nového uživatele
     token, created = Token.objects.get_or_create(user=user)
@@ -584,6 +621,12 @@ def login_view(request):
 
     if user:
         token, created = Token.objects.get_or_create(user=user)
+        player = Player_info.objects.filter(username=user).first()
+        if player:
+            print(f"Hráč {user.username} se úspěšně přihlásil. Aktualizuji jeho poslední přihlášení a stav.") 
+            player.last_login = timezone.now()  # Aktualizace času posledního přihlášení
+            player.active_status = True  # Nastavení hráče jako aktivního
+            player.save()
         return Response({
             "token": token.key,
             "username": user.username,
@@ -660,12 +703,11 @@ def admin_random_item(request):
 
     all_items = Item_default.objects.all()
     random_item = random.choice(all_items)
-    item_category = random_item.category
     amount = 1
     
     item_status = "inventory"
     
-    item_generator_all(user=user, item_status=item_status, item_base_id=random_item.item_base_id, item_category=item_category, amount=amount)
+    item_generator_all(user=user, item_status=item_status, item_base_id=random_item.item_base_id, amount=amount)
     
     # aktualizace DMG po přidání nové zbraně do inventáře
 

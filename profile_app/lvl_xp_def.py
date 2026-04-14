@@ -18,7 +18,17 @@ def lvl_up(player):
     # zvednutí levelu
     player.lvl += 1
     player.xp -= player.xp_next_lvl
-    player.xp_next_lvl = int(player.xp_next_lvl * 1.1)  # Zvyšování XP pro další úroveň O 10% každou úroveň
+    
+    xp_var = 1.01
+    for i in range (1, player.lvl):
+        xp_var += 0.001
+        if xp_var >= 1.05:
+            xp_var = 1.05
+        print(f"Level: {i} | XP Var: {xp_var:.3f}")
+            
+    new_xp = player.xp_next_lvl * xp_var
+    
+    player.xp_next_lvl = float(new_xp)  # Zvyšování XP pro další úroveň O 10% každou úroveň
     
     # ATRIBUT A SKILL POINTS
     player.atr_points += 5

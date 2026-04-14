@@ -5,7 +5,8 @@ class Dungeon(models.Model):
     dungeon_base_id = models.IntegerField(("Dungeon Base ID"), unique=True)
     name = models.CharField(max_length=100, verbose_name="Název dungeonu")
     description = models.TextField(verbose_name="Popis")
-    background_img = models.CharField(max_length=100, help_text="Název obrázku ve Flutteru (např. 'bg_dark_cave')")
+    background_img = models.CharField(max_length=100, blank=True, help_text="Název obrázku ve Flutteru (např. 'bg_dark_cave')")
+    icon_img = models.CharField(max_length=100, blank=True, help_text="Název ikony ve Flutteru (např. 'icon_dark_cave')")
     min_level = models.IntegerField(default=1, verbose_name="Minimální úroveň pro vstup")
     enemies = models.ManyToManyField(
         Enemy, 

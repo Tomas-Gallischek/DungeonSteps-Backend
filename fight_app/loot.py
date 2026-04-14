@@ -50,9 +50,8 @@ def loot_created(gold_obtained, loot_obtained, player):
     for item in loot_obtained:
         item_satus = "inventory"
         item_base_id = str(item["base_id"])
-        item_category = item["category"]
         amount = 1
-        item_generator_all(user=player.username, item_status=item_satus, item_base_id=item_base_id, item_category=item_category, amount=amount)
+        item_generator_all(user=player.username, item_status=item_satus, item_base_id=item_base_id, amount=amount)
         
     print(f"Spouštím GENERÁTOR ZLATA pro: {player.username} ...")
     if gold_obtained:
