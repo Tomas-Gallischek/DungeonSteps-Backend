@@ -13,4 +13,5 @@ urlpatterns = [
     path('init_fight/', views.init_fight, name='init_fight'),
     path('sell_item/', views.sell_item, name='sell_item'),
     path('dungeon/<int:dungeon_id>/', views.get_dungeon_details, name='dungeon_details'),
+    path('get_all_upgrades/', views.get_all_upgrades, name='get_all_upgrades'),
 ]

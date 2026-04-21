@@ -16,7 +16,7 @@ from datetime import timedelta
 
 # NAČÍTÁNÍ MODELU
 from profile_app.models import Player_info, Player_Items_EQP_ABLE, Player_Item_Material
-from item_app.models import Item_default
+from item_app.models import Item_default, ItemUpgrade
 from map_app.models import Dungeon, Void, WorldBoss
 from enemy_app.models import Enemy
 from fight_app.models import fight_log
@@ -159,9 +159,69 @@ def get_profile(request):
     }, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_upgrades(request):
+    user = request.user
+    player = Player_info.objects.filter(username=user).first()
+    
+
+    if not player:
+        return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # 1. Získáme base_id všech předmětů hráče, které MŮŽE vylepšit (tj. mají menší level než 10)
+    # Používáme distinct(), abychom nehledali recept na "Rezavý meč" 5x, pokud jich má hráč pět.
+    
+    base_item_ids = Player_Items_EQP_ABLE.objects.filter(
+        player=player, 
+        item_lvl__lt=9  # Chceme jen ty, co jdou vylepšit NA další level
+    ).values_list('item_base_id', flat=True).distinct()
+
+    # 2. Vytáhneme všechny upgrady pro tyto předměty.
+    # select_related a prefetch_related jsou zde extrémně důležité pro rychlost API!
+    # (Předpokládám, že cizí klíč v ItemUpgrade se jmenuje "item", a že jeho PK je to tvé base_id)
+    
+# Přidáme select_related pro weapon_submodel, abychom se vyhnuli pomalým dotazům
+    all_upgrades = ItemUpgrade.objects.filter(
+        item__item_base_id__in=base_item_ids
+    ).select_related('item', 'item__weapon_details').prefetch_related('materials__material')
+
+    upgrades_data = []
+    
+    for upgrade in all_upgrades:
+        # Získání koeficientu ze submodelu zbraně
+        dmg_koef = 0.0
+        if upgrade.item.category == 'weapon':
+            # Tady pozor: použij název relace, který máš v modelu Item_default pro zbraně
+            # Pokud se jmenuje weapon_details, tak:
+            weapon_data = getattr(upgrade.item, 'weapon_details', None)
+            if weapon_data:
+                dmg_koef = float(weapon_data.weapon_dmg_up_koef)
+                print(f"Získaný koeficient pro upgrade ID {upgrade.id} (předmět {upgrade.item.name}): {dmg_koef}")
+
+        materials_data = [
+            {
+                "material_base_id": mat.material.item_base_id,
+                "name": mat.material.name,
+                "item_img_ozn": getattr(mat.material, 'item_img_ozn', 'default'),
+                "amount": mat.amount
+            } for mat in upgrade.materials.all()
+        ]
+            
+        upgrades_data.append({
+            "upgrade_id": upgrade.id,
+            "item_base_id": upgrade.item.item_base_id,
+            "target_lvl": upgrade.lvl,
+            "gold_cost": upgrade.gold_cost,
+            "chance": upgrade.chance,
+            "weapon_dmg_up_koef": dmg_koef, # <--- POSÍLÁME KOEFICIENT DO FRONTENDU
+            "materials": materials_data
+        })
+
+    return Response({"recipes": upgrades_data})
+
+
 # MAPA
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_dungeon_details(request, dungeon_id):

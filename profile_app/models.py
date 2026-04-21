@@ -2,8 +2,6 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 
-
-
 class Player_info(models.Model):
     
     ROLE_CHOICES = [
@@ -388,6 +386,7 @@ class Player_Items_EQP_ABLE(models.Model):
     dmg_min = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
     dmg_max = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
     dmg_avg = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
+    weapon_dmg_up_koef = models.FloatField(null=True, blank=True, default=0.08, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.08 = 8%)")
     
 # ATTACK SPEED - U ZBRANÍ, BRNĚNÍ, HELMŮ A BOT
     attack_speed_weapon=models.FloatField(null=True, blank=True, default=None)
@@ -397,12 +396,24 @@ class Player_Items_EQP_ABLE(models.Model):
     
 # POUZE BRNĚNÍ
     plus_hp = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)], default=0)
+    armor_armor_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+    armor_hp_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+
+# POUZE HELMY
+    helmet_armor_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+
+# POUZE BOTY
+    boots_armor_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+    boots_attack_speed_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")  
+
 
 # POUZE AMULETY
     all_atr_bonus_amulet = models.FloatField(null=True, blank=True, default=0)
+    amulet_atr_up_koef = models.FloatField(null=True, blank=True, default=0.2, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.2 = 20%)")
 
 # POUZE PRSTENY
     all_atr_bonus_ring = models.FloatField(null=True, blank=True, default=0)
+    ring_atr_up_koef = models.FloatField(null=True, blank=True, default=0.2, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.2 = 20%)")
     
 # POUZE PRO TALISMANY
     talisman_bonus_name = models.CharField(max_length=255, null=True, blank=True, default=None)

@@ -231,15 +231,29 @@ def item_generator_all(user, item_status, item_base_id, amount):
             dmg_min=dmg_min if item.category == "weapon" else None,
             dmg_max=dmg_max if item.category == "weapon" else None,
             dmg_avg=dmg_avg if item.category == "weapon" else None,
+            weapon_dmg_up_koef=item.weapon_details.weapon_dmg_up_koef if item.category == "weapon" else None,
             
         # POUZE BRNĚNÍ
             plus_hp=armor_hp_bonus if item.category == "armor" else None,
+            armor_armor_up_koef=item.armor_details.armor_armor_up_koef if item.category == "armor" else None,
+            armor_hp_up_koef=item.armor_details.armor_hp_up_koef if item.category == "armor" else None,
+
+        # POUZE HELMY
+            helmet_armor_up_koef=item.helmet_details.helmet_armor_up_koef if item.category == "helmet" else None,
+            
+        # POUZE BOTY
+            boots_armor_up_koef=item.boots_details.boots_armor_up_koef if item.category == "boots" else None,
+            boots_attack_speed_up_koef=item.boots_details.boots_attack_speed_up_koef if item.category == "boots" else None,
+
 
         # POUZE AMULETY
             all_atr_bonus_amulet=all_atr_bonus_amulet if item.category == "amulet" else None,
-            
+            amulet_atr_up_koef=item.amulet_details.amulet_atr_up_koef if item.category == "amulet" else None,
+
+        
         # POUZE PRSTENY
             all_atr_bonus_ring=all_atr_bonus_ring if item.category == "ring" else None,
+            ring_atr_up_koef=item.ring_details.ring_atr_up_koef if item.category == "ring" else None,
         
         # POUZE TALISMAN
             talisman_bonus_name=talisman_bonus_name if item.category == "talisman" else None,

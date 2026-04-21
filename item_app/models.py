@@ -41,6 +41,10 @@ class Item_default(models.Model):
         verbose_name = "--- VŠECHNY ITEMY ---"
         verbose_name_plural = "--- VŠECHNY ITEMY ---"
 
+    # SEŘAZENÍ PODLE BASE_ID KDYŽ NA TUTO DATABÁZI ODKAZUJU
+        ordering = ['item_base_id'] 
+        # (Pokud bys chtěl sestupně, dáš ['-item_base_id'])
+
 class Item_Weapon_Submodel(models.Model):
     DMG_TYPE_CHOICES = [
     ('heavy', 'Heavy'),
@@ -52,7 +56,10 @@ class Item_Weapon_Submodel(models.Model):
     item = models.OneToOneField(Item_default, on_delete=models.CASCADE, related_name='weapon_details')
     dmg_type = models.CharField(max_length=50, choices=DMG_TYPE_CHOICES)
     dmg_base = models.IntegerField(null=True, blank=True)  
-    plus_attack_speed = models.FloatField(null=True, blank=True, default=1.0)  
+    plus_attack_speed = models.FloatField(null=True, blank=True, default=1.0)
+    
+    # UPGRADE
+    weapon_dmg_up_koef = models.FloatField(null=True, blank=True, default=0.08, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.08 = 8%)")
     
     def __str__(self):
         return f"{self.item.name} - {self.dmg_type} - {self.dmg_base} - {self.plus_attack_speed} - Weapon Details"
@@ -68,14 +75,17 @@ class Item_Armor_Submodel(models.Model):
     ('magic', 'Magic'),
     ('none', 'None'),
 ]
-    
-    
     item = models.OneToOneField(Item_default, on_delete=models.CASCADE, related_name='armor_details')
     dmg_type = models.CharField(max_length=50, choices=DMG_TYPE_CHOICES, default='none')   
     armor_base = models.IntegerField(null=True, blank=True)
     plus_hp = models.IntegerField(null=True, blank=True)
     min_minus_attack_speed = models.FloatField(null=True, blank=True, default=0.01)
     max_minus_attack_speed = models.FloatField(null=True, blank=True, default=0.05) 
+    
+    
+    # UPGRADE
+    armor_armor_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+    armor_hp_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
     
     def __str__(self):
         return f"{self.item.name} - {self.dmg_type} - {self.armor_base} - {self.min_minus_attack_speed} - {self.max_minus_attack_speed} - {self.plus_hp} - Armor Details"
@@ -97,6 +107,10 @@ class Item_Helmet_Submodel(models.Model):
     min_minus_attack_speed = models.FloatField(null=True, blank=True, default=0.0)
     max_minus_attack_speed = models.FloatField(null=True, blank=True, default=0.0)
     
+    
+    # UPGRADE
+    helmet_armor_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+    
     def __str__(self):
         return f"{self.item.name} - {self.dmg_type} - {self.armor_base} - {self.min_minus_attack_speed} - {self.max_minus_attack_speed} - Helmet Details"
     
@@ -116,6 +130,10 @@ class Item_Boots_Submodel(models.Model):
     armor_base = models.IntegerField(null=True, blank=True)
     plus_percent_attack_speed = models.FloatField(null=True, blank=True, default=0.0)
     
+    # UPGRADE
+    boots_armor_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+    boots_attack_speed_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")  
+    
     def __str__(self):
         return f"{self.item.name} - {self.dmg_type} - {self.armor_base} - {self.plus_percent_attack_speed} - Boots Details"    
     
@@ -126,6 +144,9 @@ class Item_Boots_Submodel(models.Model):
 class Item_Amulet_Submodel(models.Model):
     item = models.OneToOneField(Item_default, on_delete=models.CASCADE, related_name='amulet_details')   
     all_atr_bonus = models.FloatField(null=True, blank=True, default=0.0)
+    
+    # UPGRADE
+    amulet_atr_up_koef = models.FloatField(null=True, blank=True, default=0.2, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.2 = 20%)")
         
     def __str__(self):
         return f"{self.item.name} - {self.all_atr_bonus} - Amulet Details"
@@ -137,6 +158,9 @@ class Item_Amulet_Submodel(models.Model):
 class Item_Ring_Submodel(models.Model):
     item = models.OneToOneField(Item_default, on_delete=models.CASCADE, related_name='ring_details')   
     all_atr_bonus = models.FloatField(null=True, blank=True, default=0.0)
+     
+    # UPGRADE
+    ring_atr_up_koef = models.FloatField(null=True, blank=True, default=0.2, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.2 = 20%)")
         
     def __str__(self):
         return f"{self.item.name} - {self.all_atr_bonus} - Ring Details"
@@ -231,49 +255,59 @@ class All_Items_Bonus(models.Model):
         verbose_name_plural = "All Items Bonuses"
         
         
-class Upgrade_Items:
-    item = models.ForeignKey(Item_default, on_delete=models.CASCADE, related_name='upgrade_items')
+class ItemUpgrade(models.Model):
+    """Jeden záznam = jeden konkrétní level vylepšení pro daný předmět."""
+    item = models.ForeignKey(Item_default, on_delete=models.CASCADE, related_name='upgrades')
+    lvl = models.PositiveIntegerField() # Např. 1, 2, 3...
+    gold_cost = models.PositiveIntegerField(default=0, help_text="AUTOMATICKY doplněno")
+    delfault_chance = models.BooleanField(default=True, help_text="Základní nastavení (50% / lvl10)")
+    custom_chance = models.BooleanField(default=False, help_text="Použít vlastní šanci místo základní")
     
-    lvl_1_material = models.ManyToManyField(Item_default, related_name='lvl_1_materials', blank=True)
-    lvl_1_amount = models.IntegerField(blank=True, null=True)
-    lvl_1_gold_cost = models.IntegerField(blank=True, null=True)
+    chance = models.FloatField(null=True, blank=True, help_text="0.1 = 10%, 1=100% - AUTO DOPLNĚNÍ při DEFAULT_CHANCE = TRUE")
 
-    lvl_2_material = models.ManyToManyField(Item_default, related_name='lvl_2_materials', blank=True)
-    lvl_2_amount = models.IntegerField(blank=True, null=True)
-    lvl_2_gold_cost = models.IntegerField(blank=True, null=True)
+    class Meta:
+        # Zabrání tomu, abys omylem vytvořil dvě různá vylepšení na level 2 pro stejný item
+        unique_together = ('item', 'lvl')
+        ordering = ['lvl']
 
-    lvl_3_material = models.ManyToManyField(Item_default, related_name='lvl_3_materials', blank=True)
-    lvl_3_amount = models.IntegerField(blank=True, null=True)
-    lvl_3_gold_cost = models.IntegerField(blank=True, null=True)
+    def save(self, *args, **kwargs):
+        
+    # AUTOMATICKÉ DOPLNĚNÍ CENY
+        lvl_koef = 5
+        up_koef = 1.5
+        lvl_req = self.item.lvl_req if self.item.lvl_req else 1
+        
+        final_cost = (lvl_koef * (lvl_req * lvl_req))
+        
+        for lvl in range(1, self.lvl + 1):
+            final_cost *= up_koef
+            
+        self.gold_cost = round(final_cost)
+        
+    # AUTOMATICKÉ DOPLNĚNÍ ŠANCE
+        if self.delfault_chance:
+            base_chance = 0.95
+            chance_decrease_per_level = 0.05
+            
+            calculated_chance = round(base_chance - (chance_decrease_per_level * (self.lvl - 1)), 2)
+            self.chance = max(calculated_chance, 0.01)  # Zajistí, že šance nikdy neklesne pod 1%
+        
+        super().save(*args, **kwargs)
 
-    lvl_4_material = models.ManyToManyField(Item_default, related_name='lvl_4_materials', blank=True)
-    lvl_4_amount = models.IntegerField(blank=True, null=True)
-    lvl_4_gold_cost = models.IntegerField(blank=True, null=True)
-
-    lvl_5_material = models.ManyToManyField(Item_default, related_name='lvl_5_materials', blank=True)
-    lvl_5_amount = models.IntegerField(blank=True, null=True)
-    lvl_5_gold_cost = models.IntegerField(blank=True, null=True)
-
-    lvl_6_material = models.ManyToManyField(Item_default, related_name='lvl_6_materials', blank=True)
-    lvl_6_amount = models.IntegerField(blank=True, null=True)
-    lvl_6_gold_cost = models.IntegerField(blank=True, null=True)
-    
-    lvl_7_material = models.ManyToManyField(Item_default, related_name='lvl_7_materials', blank=True)
-    lvl_7_amount = models.IntegerField(blank=True, null=True)
-    lvl_7_gold_cost = models.IntegerField(blank=True, null=True)
-    
-    lvl_8_material = models.ManyToManyField(Item_default, related_name='lvl_8_materials', blank=True)
-    lvl_8_amount = models.IntegerField(blank=True, null=True)
-    lvl_8_gold_cost = models.IntegerField(blank=True, null=True)
-    
-    lvl_9_material = models.ManyToManyField(Item_default, related_name='lvl_9_materials', blank=True)
-    lvl_9_amount = models.IntegerField(blank=True, null=True)
-    lvl_9_gold_cost = models.IntegerField(blank=True, null=True)
-    
-    lvl_10_material = models.ManyToManyField(Item_default, related_name='lvl_10_materials', blank=True)
-    lvl_10_amount = models.IntegerField(blank=True, null=True)
-    lvl_10_gold_cost = models.IntegerField(blank=True, null=True)
-    
     def __str__(self):
-        return f"{self.item.name} - Upgrade Items"
+        return f"{self.item.name} - Upgrade na Lvl {self.lvl} - Cena: {self.gold_cost} g"
+
+
+class UpgradeMaterial(models.Model):
+    """Tohle řeší ten problém s množstvím! Kolik kterého materiálu je potřeba."""
+    upgrade = models.ForeignKey(ItemUpgrade, on_delete=models.CASCADE, related_name='materials')
+    material = models.ForeignKey(Item_default, on_delete=models.CASCADE)
+    amount = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.amount}x {self.material.name} pro {self.upgrade}"
+    
+
+    
+    
     
