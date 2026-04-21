@@ -26,25 +26,52 @@ from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
 from profile_app.register import default_atr, default_hp_mana
 from item_app.item_generator import item_generator_all
+from item_app.upgrade_items import upgrade_item
 from fight_app.fight import fight
 from fight_app.loot import loot_created
+
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_profile(request):    
     user = request.user
     player = Player_info.objects.filter(username=user).first()
-    all_items_eqp_able = Player_Items_EQP_ABLE.objects.all().filter(player=player)  # Získáme všechny vybavitelné položky patřící hráči
-    all_items_material = Player_Item_Material.objects.all().filter(player=player)  # Získáme všechny materiály patřící hráči
     
     if not player:
         return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
+        
+    all_items_eqp_able = Player_Items_EQP_ABLE.objects.filter(player=player)  
+    all_items_material = Player_Item_Material.objects.filter(player=player)  
     
     player.save()
-        
+    
+    # BEZPEČNÉ NAČÍTÁNÍ (Bez select_related, které shazovalo server)
+    base_ids = set([item.item_base_id for item in all_items_eqp_able if item.item_base_id])
+    base_items = Item_default.objects.filter(item_base_id__in=base_ids)
+    
+    coef_map = {}
+    for base in base_items:
+        # getattr nespadne, i když se submodel jmenuje v databázi jinak
+        weapon_data = getattr(base, 'weapon_details', getattr(base, 'weapon_submodel', None))
+        armor_data = getattr(base, 'armor_details', None)
+        helmet_data = getattr(base, 'helmet_details', None)
+        boots_data = getattr(base, 'boots_details', None)
+        amulet_data = getattr(base, 'amulet_details', None)
+        ring_data = getattr(base, 'ring_details', None)
+
+        coef_map[base.item_base_id] = {
+            "weapon_dmg_up_koef": float(getattr(weapon_data, 'weapon_dmg_up_koef', 0.0) or 0.0) if weapon_data else 0.0,
+            "armor_armor_up_koef": float(getattr(armor_data, 'armor_armor_up_koef', 0.0) or 0.0) if armor_data else 0.0,
+            "armor_hp_up_koef": float(getattr(armor_data, 'armor_hp_up_koef', 0.0) or 0.0) if armor_data else 0.0,
+            "helmet_armor_up_koef": float(getattr(helmet_data, 'helmet_armor_up_koef', 0.0) or 0.0) if helmet_data else 0.0,
+            "boots_armor_up_koef": float(getattr(boots_data, 'boots_armor_up_koef', 0.0) or 0.0) if boots_data else 0.0,
+            "boots_attack_speed_up_koef": float(getattr(boots_data, 'boots_attack_speed_up_koef', 0.0) or 0.0) if boots_data else 0.0,
+            "amulet_atr_up_koef": float(getattr(amulet_data, 'amulet_atr_up_koef', 0.0) or 0.0) if amulet_data else 0.0,
+            "ring_atr_up_koef": float(getattr(ring_data, 'ring_atr_up_koef', 0.0) or 0.0) if ring_data else 0.0,
+        }
+
     return Response({
-        
-        # base info
         "username": user.username,
         "gender": player.gender,
         "role": player.role,
@@ -53,37 +80,22 @@ def get_profile(request):
         "xp_next_lvl": player.xp_next_lvl,
         "gold": player.gold,
         "dungeon_tokens": player.dungeon_tokens,
-        
-        # obrázky
         "avatar_img_ozn": player.avatar_img_ozn,
-        
-        # Aktivita hráče
         "busy_until": player.busy_until,
-        
-        # points
         "atr_points": player.atr_points,   
         "skill_points": player.skill_points,
         "energy_points": player.energy_points,
-        
-        # steps
         "steps": player.steps,
         "steps_today": player.steps_today,
-        
-        # HP + mana
         "hp_max": player.hp_max,
         "mana_max": player.mana_max,
-        
-        # atributes
         "dmg_atr": player.dmg_atr,
-        #"dmg_atr_value": player.dmg_atr_value, <-- NEPOTŘEBUJU ?
         "str_max": player.str_max,
         "dex_max": player.dex_max,
         "int_max": player.int_max,
         "vit_max": player.vit_max,
         "luck_max": player.luck_max,
         "prec_max": player.prec_max,
-        
-        #boj
         "dmg_min": player.dmg_min,
         "dmg_max": player.dmg_max,
         "attack_speed": player.attack_speed,
@@ -94,11 +106,7 @@ def get_profile(request):
         "dex_resist": player.dex_resist,
         "int_resist": player.int_resist,
         
-        
-        # items
         "all_items_eqp_able": [{
-            
-        # OBECNÉ
             "item_id": item.item_id,
             "item_base_id": item.item_base_id,
             "name": item.name,
@@ -114,7 +122,17 @@ def get_profile(request):
             "price_all": item.price_all,
             "armor": item.armor,
             "dmg_type": item.dmg_type,
-        # ÚTOK
+            "item_lvl": getattr(item, 'item_lvl', 1),
+            
+            "weapon_dmg_up_koef": coef_map.get(item.item_base_id, {}).get("weapon_dmg_up_koef", 0.0),
+            "armor_armor_up_koef": coef_map.get(item.item_base_id, {}).get("armor_armor_up_koef", 0.0),
+            "armor_hp_up_koef": coef_map.get(item.item_base_id, {}).get("armor_hp_up_koef", 0.0),
+            "helmet_armor_up_koef": coef_map.get(item.item_base_id, {}).get("helmet_armor_up_koef", 0.0),
+            "boots_armor_up_koef": coef_map.get(item.item_base_id, {}).get("boots_armor_up_koef", 0.0),
+            "boots_attack_speed_up_koef": coef_map.get(item.item_base_id, {}).get("boots_attack_speed_up_koef", 0.0),
+            "amulet_atr_up_koef": coef_map.get(item.item_base_id, {}).get("amulet_atr_up_koef", 0.0),
+            "ring_atr_up_koef": coef_map.get(item.item_base_id, {}).get("ring_atr_up_koef", 0.0),
+
             "dmg_min": item.dmg_min,
             "dmg_max": item.dmg_max,
             "dmg_avg": item.dmg_avg,
@@ -122,22 +140,17 @@ def get_profile(request):
             "attack_speed_armor": item.attack_speed_armor,
             "attack_speed_helmet": item.attack_speed_helmet,
             "attack_speed_boots": item.attack_speed_boots,
-        # ARMOR HP
             "plus_hp": item.plus_hp,
-        # AMULETY A PRSTENY
             "all_atr_bonus_amulet": item.all_atr_bonus_amulet,
             "all_atr_bonus_ring": item.all_atr_bonus_ring,
-        # TALISMANY
             "talisman_bonus_name": item.talisman_bonus_name,
             "talisman_bonus_type": item.talisman_bonus_type,
             "talisman_bonus_value": item.talisman_bonus_value,
-        # PETI
             "pet_lvl": item.pet_lvl,
             "pet_armor_bonus": item.pet_armor_bonus,
             "pet_dmg_bonus": item.pet_dmg_bonus,
             "pet_hp_bonus": item.pet_hp_bonus,
             "pet_prum_skoda_bonus": item.pet_prum_skoda_bonus,
-            
         } for item in all_items_eqp_able],
         
         "all_items_material": [{
@@ -153,9 +166,8 @@ def get_profile(request):
             "rarity": item.rarity,
             "price_ks": item.price_ks,
             "price_all": item.price_all,
-            "stackable": item.stack_able,
+            "stackable": getattr(item, 'stack_able', True),
         } for item in all_items_material],
-        
     }, status=status.HTTP_200_OK)
 
 
@@ -165,39 +177,28 @@ def get_all_upgrades(request):
     user = request.user
     player = Player_info.objects.filter(username=user).first()
     
-
     if not player:
         return Response({"error": "Profil nenalezen"}, status=status.HTTP_404_NOT_FOUND)
     
-    # 1. Získáme base_id všech předmětů hráče, které MŮŽE vylepšit (tj. mají menší level než 10)
-    # Používáme distinct(), abychom nehledali recept na "Rezavý meč" 5x, pokud jich má hráč pět.
-    
     base_item_ids = Player_Items_EQP_ABLE.objects.filter(
         player=player, 
-        item_lvl__lt=9  # Chceme jen ty, co jdou vylepšit NA další level
+        item_lvl__lt=9  
     ).values_list('item_base_id', flat=True).distinct()
 
-    # 2. Vytáhneme všechny upgrady pro tyto předměty.
-    # select_related a prefetch_related jsou zde extrémně důležité pro rychlost API!
-    # (Předpokládám, že cizí klíč v ItemUpgrade se jmenuje "item", a že jeho PK je to tvé base_id)
-    
-# Přidáme select_related pro weapon_submodel, abychom se vyhnuli pomalým dotazům
+    # I ZDE ODSTRANĚNO select_related PRO SUBMODELY (Zabraňuje pádu!)
     all_upgrades = ItemUpgrade.objects.filter(
         item__item_base_id__in=base_item_ids
-    ).select_related('item', 'item__weapon_details').prefetch_related('materials__material')
+    ).select_related('item').prefetch_related('materials__material')
 
     upgrades_data = []
     
     for upgrade in all_upgrades:
-        # Získání koeficientu ze submodelu zbraně
-        dmg_koef = 0.0
-        if upgrade.item.category == 'weapon':
-            # Tady pozor: použij název relace, který máš v modelu Item_default pro zbraně
-            # Pokud se jmenuje weapon_details, tak:
-            weapon_data = getattr(upgrade.item, 'weapon_details', None)
-            if weapon_data:
-                dmg_koef = float(weapon_data.weapon_dmg_up_koef)
-                print(f"Získaný koeficient pro upgrade ID {upgrade.id} (předmět {upgrade.item.name}): {dmg_koef}")
+        weapon_data = getattr(upgrade.item, 'weapon_details', getattr(upgrade.item, 'weapon_submodel', None))
+        armor_data = getattr(upgrade.item, 'armor_details', None)
+        helmet_data = getattr(upgrade.item, 'helmet_details', None)
+        boots_data = getattr(upgrade.item, 'boots_details', None)
+        amulet_data = getattr(upgrade.item, 'amulet_details', None)
+        ring_data = getattr(upgrade.item, 'ring_details', None)
 
         materials_data = [
             {
@@ -214,7 +215,16 @@ def get_all_upgrades(request):
             "target_lvl": upgrade.lvl,
             "gold_cost": upgrade.gold_cost,
             "chance": upgrade.chance,
-            "weapon_dmg_up_koef": dmg_koef, # <--- POSÍLÁME KOEFICIENT DO FRONTENDU
+            
+            "weapon_dmg_up_koef": float(getattr(weapon_data, 'weapon_dmg_up_koef', 0.0) or 0.0) if weapon_data else 0.0,
+            "armor_armor_up_koef": float(getattr(armor_data, 'armor_armor_up_koef', 0.0) or 0.0) if armor_data else 0.0,
+            "armor_hp_up_koef": float(getattr(armor_data, 'armor_hp_up_koef', 0.0) or 0.0) if armor_data else 0.0,
+            "helmet_armor_up_koef": float(getattr(helmet_data, 'helmet_armor_up_koef', 0.0) or 0.0) if helmet_data else 0.0,
+            "boots_armor_up_koef": float(getattr(boots_data, 'boots_armor_up_koef', 0.0) or 0.0) if boots_data else 0.0,
+            "boots_attack_speed_up_koef": float(getattr(boots_data, 'boots_attack_speed_up_koef', 0.0) or 0.0) if boots_data else 0.0,
+            "amulet_atr_up_koef": float(getattr(amulet_data, 'amulet_atr_up_koef', 0.0) or 0.0) if amulet_data else 0.0,
+            "ring_atr_up_koef": float(getattr(ring_data, 'ring_atr_up_koef', 0.0) or 0.0) if ring_data else 0.0,
+            
             "materials": materials_data
         })
 
@@ -700,3 +710,26 @@ def admin_random_item(request):
 
 
     return Response({"message": f"Náhodná věc úspěšně vygenerována pro hráče {user.username}"}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def item_upgrade(request):
+    print("Funkce item_upgrade byla zavolána!")
+    user = request.user 
+    item_id = request.data.get('item_id')
+    base_id = request.data.get('base_id')
+
+
+    result = upgrade_item(item_id, base_id)
+
+    player = Player_info.objects.filter(username=user).first()
+    if not player:
+        return Response({"error": "Profil hráče nebyl nalezen"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if result == "success":
+        return Response({"message": f"Položka s ID {item_id} byla úspěšně upgradována pro hráče {user.username}"}, status=status.HTTP_200_OK)
+    elif result == "failure":
+        return Response({"message": f"Upgrade položky s ID {item_id} se nezdařil pro hráče {user.username}"}, status=status.HTTP_200_OK)
+    else:
+        return Response({"error": "Položka nebyla nalezena"}, status=status.HTTP_404_NOT_FOUND)
