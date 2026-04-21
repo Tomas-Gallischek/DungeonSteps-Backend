@@ -26,48 +26,8 @@ from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
 from profile_app.register import default_atr, default_hp
 from item_app.item_generator import item_generator_all
-from profile_app.shop import shop_reset
 from fight_app.fight import fight
 from fight_app.loot import loot_created
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_shop(request):
-    user = request.user
-    player = Player_info.objects.filter(username=user).first()
-    
-    if not player:
-        return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
-    
-    shop_items = Player_Items_EQP_ABLE.objects.filter(item_status='shop')
-    print(f"Načítáno BACKEND {shop_items.count()} položek z obchodu pro hráče {user.username}")
-    
-    try:
-        return Response({
-            "items_in_shop": [{
-                "item_id": item.item_id,
-                "item_img_ozn": item.item_img_ozn,
-                "item_base_id": item.item_base_id,
-                "item_status": item.item_status,
-                "name": item.name,
-                "description": item.description,
-                "category": item.category,
-                "dmg_type": item.dmg_type,
-                "lvl_req": item.lvl_req,
-                "rarity": item.rarity,
-                "price_ks": item.price_ks,
-                "price_all": item.price_all,
-                "dmg_min": item.dmg_min,
-                "dmg_max": item.dmg_max,
-                "dmg_avg": item.dmg_avg,
-                "armor": item.armor,
-                "item_bonus": item.item_bonus,
-            } for item in shop_items]
-        }, status=status.HTTP_200_OK)
-    except Exception as e:
-        print(f"Chyba při zpracování dat obchodu: {e}")
-        return Response({"error": "Chyba při načítání obchodu"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -96,6 +56,8 @@ def get_profile(request):
         
         # obrázky
         "avatar_img_ozn": player.avatar_img_ozn,
+        
+        # Aktivita hráče
         "busy_until": player.busy_until,
         
         # points
@@ -107,17 +69,19 @@ def get_profile(request):
         "steps": player.steps,
         "steps_today": player.steps_today,
         
-        # HP
+        # HP + mana
         "hp_max": player.hp_max,
+        "mana_max": player.mana_max,
         
         # atributes
         "dmg_atr": player.dmg_atr,
-        "dmg_atr_value": player.dmg_atr_value,
+        #"dmg_atr_value": player.dmg_atr_value, <-- NEPOTŘEBUJU ?
         "str_max": player.str_max,
         "dex_max": player.dex_max,
         "int_max": player.int_max,
         "vit_max": player.vit_max,
         "luck_max": player.luck_max,
+        "prec_max": player.prec_max,
         
         #boj
         "dmg_min": player.dmg_min,
@@ -135,6 +99,7 @@ def get_profile(request):
         "all_items_eqp_able": [{
             
         # OBECNÉ
+            "item_id": item.item_id,
             "item_base_id": item.item_base_id,
             "name": item.name,
             "description": item.description,
@@ -176,7 +141,7 @@ def get_profile(request):
         } for item in all_items_eqp_able],
         
         "all_items_material": [{
-
+            "item_id": item.item_id,
             "item_base_id": item.item_base_id,
             "name": item.name,
             "description": item.description,
@@ -188,7 +153,7 @@ def get_profile(request):
             "rarity": item.rarity,
             "price_ks": item.price_ks,
             "price_all": item.price_all,
-            "stackable": item.stackable,
+            "stackable": item.stack_able,
         } for item in all_items_material],
         
     }, status=status.HTTP_200_OK)
@@ -225,34 +190,6 @@ def get_dungeon_details(request, dungeon_id):
 
     # 4. Odešleme na frontend
     return Response(dungeon_data, status=status.HTTP_200_OK)
-
-
-# OBCHOD
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def shop_buy(request):
-    user = request.user
-    player = Player_info.objects.filter(username=user).first()
-    
-    if not player:
-        return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
-    
-    item_id = request.data.get('item_id')
-    item_name = request.data.get('item_name')
-    item_price = request.data.get('item_price')
-
-    if not item_id or not item_name or not item_price:
-        return Response({"error": "Chybí informace o položce"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if player.gold < float(item_price):
-        return Response({"error": "Nedostatek zlata pro nákup této položky"}, status=status.HTTP_400_BAD_REQUEST)
-
-    gold_plus(user=user, amount=-float(item_price))  # Odečteme cenu zlatem
-    Player_Items_EQP_ABLE.objects.filter(item_id=item_id, item_status='shop').update(item_status='inventory', player=player)  # Přesuneme položku z obchodu do inventáře hráče
-    
-    return Response({"message": f"Úspěšně zakoupeno: {item_name} za {item_price} zlata"}, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -301,21 +238,6 @@ def sell_item(request):
         return Response({"message": f"Úspěšně prodáno: {item_name} za {item_price} zlata"}, status=status.HTTP_200_OK)
     else:
         return Response({"error": "Položka nebyla nalezena v inventáři hráče"}, status=status.HTTP_404_NOT_FOUND) 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def shop_refresh(request):
-    
-# NAČTENÍ DAT Z FRONTENDU
-    user = request.user
-    if not user:
-        return Response({"error": "Profil hráče nenalezen"}, status=status.HTTP_404_NOT_FOUND)
-
-    gold_plus(user=user, amount=-100)  # Odečteme 100 goldů za refresh obchodu
-    shop_reset(user=user)
-    
-# VRÁCENÍ VÝSLEDKU FRONTENDU
-    return Response(status=status.HTTP_200_OK)
 
 
 # SOUBOJE
@@ -510,11 +432,16 @@ def add_atr(request):
 @permission_classes([IsAuthenticated])
 def toggle_equip(request):
     user = request.user
-    item_name = request.data.get('item_name')
-    new_status = request.data.get('new_status')
     player = Player_info.objects.filter(username=user).first()
     item_id = request.data.get('item_id')
+    
     item = Player_Items_EQP_ABLE.objects.filter(item_id=item_id).first()
+    item_name = item.name if item else "Neznámá položka"
+    if item.item_status == 'equipped':
+        new_status = 'inventory'
+    else:
+        new_status = 'equipped'
+    
 
     if new_status not in ['equipped', 'inventory']:
         return Response({"error": "Neplatný status položky"}, status=status.HTTP_400_BAD_REQUEST)

@@ -32,6 +32,7 @@ class Item_default(models.Model):
     shop_max_lvl_drop = models.IntegerField(null=True, blank=True, default=99)
     specific_rarity = models.CharField(max_length=50, choices=RARITY_CHOICES, blank=True, null=True, default=None) # pro specifické itemy, které mají pevnou raritu (např. legendární peti)
     stack_able = models.BooleanField(default=True)
+    item_lvl = models.IntegerField(default=0, blank=True, null=True)
     
     def __str__(self):
         return f"{self.name} - {self.category} - Base ID: {self.item_base_id}"
@@ -228,3 +229,51 @@ class All_Items_Bonus(models.Model):
     class Meta:
         verbose_name = "All Items Bonus"
         verbose_name_plural = "All Items Bonuses"
+        
+        
+class Upgrade_Items:
+    item = models.ForeignKey(Item_default, on_delete=models.CASCADE, related_name='upgrade_items')
+    
+    lvl_1_material = models.ManyToManyField(Item_default, related_name='lvl_1_materials', blank=True)
+    lvl_1_amount = models.IntegerField(blank=True, null=True)
+    lvl_1_gold_cost = models.IntegerField(blank=True, null=True)
+
+    lvl_2_material = models.ManyToManyField(Item_default, related_name='lvl_2_materials', blank=True)
+    lvl_2_amount = models.IntegerField(blank=True, null=True)
+    lvl_2_gold_cost = models.IntegerField(blank=True, null=True)
+
+    lvl_3_material = models.ManyToManyField(Item_default, related_name='lvl_3_materials', blank=True)
+    lvl_3_amount = models.IntegerField(blank=True, null=True)
+    lvl_3_gold_cost = models.IntegerField(blank=True, null=True)
+
+    lvl_4_material = models.ManyToManyField(Item_default, related_name='lvl_4_materials', blank=True)
+    lvl_4_amount = models.IntegerField(blank=True, null=True)
+    lvl_4_gold_cost = models.IntegerField(blank=True, null=True)
+
+    lvl_5_material = models.ManyToManyField(Item_default, related_name='lvl_5_materials', blank=True)
+    lvl_5_amount = models.IntegerField(blank=True, null=True)
+    lvl_5_gold_cost = models.IntegerField(blank=True, null=True)
+
+    lvl_6_material = models.ManyToManyField(Item_default, related_name='lvl_6_materials', blank=True)
+    lvl_6_amount = models.IntegerField(blank=True, null=True)
+    lvl_6_gold_cost = models.IntegerField(blank=True, null=True)
+    
+    lvl_7_material = models.ManyToManyField(Item_default, related_name='lvl_7_materials', blank=True)
+    lvl_7_amount = models.IntegerField(blank=True, null=True)
+    lvl_7_gold_cost = models.IntegerField(blank=True, null=True)
+    
+    lvl_8_material = models.ManyToManyField(Item_default, related_name='lvl_8_materials', blank=True)
+    lvl_8_amount = models.IntegerField(blank=True, null=True)
+    lvl_8_gold_cost = models.IntegerField(blank=True, null=True)
+    
+    lvl_9_material = models.ManyToManyField(Item_default, related_name='lvl_9_materials', blank=True)
+    lvl_9_amount = models.IntegerField(blank=True, null=True)
+    lvl_9_gold_cost = models.IntegerField(blank=True, null=True)
+    
+    lvl_10_material = models.ManyToManyField(Item_default, related_name='lvl_10_materials', blank=True)
+    lvl_10_amount = models.IntegerField(blank=True, null=True)
+    lvl_10_gold_cost = models.IntegerField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.item.name} - Upgrade Items"
+    

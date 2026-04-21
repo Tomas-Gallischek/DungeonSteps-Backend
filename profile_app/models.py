@@ -57,7 +57,7 @@ class Player_info(models.Model):
 # POINTS
     atr_points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     skill_points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    energy_points = models.IntegerField(default=200, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    energy_points = models.IntegerField(default=100, validators=[MinValueValidator(0), MaxValueValidator(100)])
 
 # KROKY
     steps = models.IntegerField(default=0, validators=[MinValueValidator(0)])
@@ -74,6 +74,14 @@ class Player_info(models.Model):
     hp_max = models.IntegerField(default=0, blank=True)
     hp_vit_koef = models.IntegerField(("HP Vitality Coefficient"), default=1, blank=True)  # Koeficient pro výpočet HP z vitality
     hp_lvl_koef = models.IntegerField(("HP Level Coefficient"), default=10, blank=True)  # Koeficient pro výpočet HP z úrovně
+
+    mana_base = models.IntegerField(default=0, blank=True)
+    mana_stats = models.IntegerField(default=0, blank=True)
+    mana_lvl = models.IntegerField(default=0, blank=True)
+    mana_eqp = models.IntegerField(default=0, blank=True)
+    mana_max = models.IntegerField(default=0, blank=True)
+    mana_lvl_koef = models.IntegerField(("Mana Level Coefficient"), default=5, blank=True)  # Koeficient pro výpočet many z úrovně
+
 
     str_base = models.IntegerField(default=1, blank=True)
     str_stats = models.IntegerField(default=0, blank=True)
@@ -99,6 +107,11 @@ class Player_info(models.Model):
     luck_stats = models.IntegerField(default=0, blank=True)
     luck_eqp = models.IntegerField(default=0, blank=True)
     luck_max = models.IntegerField(default=1, blank=True)
+    
+    prec_base = models.IntegerField(default=1, blank=True)
+    prec_stats = models.IntegerField(default=0, blank=True)
+    prec_eqp = models.IntegerField(default=0, blank=True)
+    prec_max = models.IntegerField(default=1, blank=True)
     
 # BOJ
     dmg_base = models.IntegerField(default=1, blank=True) # <-- Základní poškození, které se bude upravovat podle atributů a vybavení
@@ -146,11 +159,12 @@ class Player_info(models.Model):
 # NAČTENÍ VŠECH BONUSŮ Z VYBAVENÍ
         equipped_items = list(self.items.filter(item_status='equipped'))
 
-        self.str_eqp = sum(item.item_bonus.get('str', 0) for item in equipped_items)
-        self.dex_eqp = sum(item.item_bonus.get('dex', 0) for item in equipped_items)
-        self.int_eqp = sum(item.item_bonus.get('int', 0) for item in equipped_items)
-        self.vit_eqp = sum(item.item_bonus.get('vit', 0) for item in equipped_items)
-        self.luck_eqp = sum(item.item_bonus.get('luck', 0) for item in equipped_items)
+        self.str_eqp = sum(item.item_bonusy.get('str', 0) for item in equipped_items)
+        self.dex_eqp = sum(item.item_bonusy.get('dex', 0) for item in equipped_items)
+        self.int_eqp = sum(item.item_bonusy.get('int', 0) for item in equipped_items)
+        self.vit_eqp = sum(item.item_bonusy.get('vit', 0) for item in equipped_items)
+        self.luck_eqp = sum(item.item_bonusy.get('luck', 0) for item in equipped_items)
+        self.prec_eqp = sum(item.item_bonusy.get('prec', 0) for item in equipped_items)
                                         
 # PETI        
         if pet_eqp:
@@ -210,8 +224,8 @@ class Player_info(models.Model):
         self.dmg_atr_value = getattr(self, f"{self.dmg_atr}_max") if weapon_eqp and weapon_eqp.dmg_type in ['heavy', 'light', 'magic'] else 1
         
         self.dmg_base = round((self.dmg_atr_value + weapon_eqp.dmg_avg + pet_dmg_bonus) * self.prum_skoda if weapon_eqp else self.lvl + self.dmg_atr_value)
-        self.dmg_min = round((self.dmg_base * weapon_eqp.dmg_min) if weapon_eqp else self.dmg_base * 0.8)  
-        self.dmg_max = round((self.dmg_base * weapon_eqp.dmg_max) if weapon_eqp else self.dmg_base * 1.2)  
+        self.dmg_min = round((self.dmg_base + weapon_eqp.dmg_min) if weapon_eqp else self.dmg_base * 0.8)  
+        self.dmg_max = round((self.dmg_base + weapon_eqp.dmg_max) if weapon_eqp else self.dmg_base * 1.2)  
         self.dmg_avg = round((self.dmg_min + self.dmg_max) // 2)
         
 # RYCHLOST ÚTOKU
@@ -331,7 +345,6 @@ class Player_Items_EQP_ABLE(models.Model):
     STATUS_CHOICES = [
         ('equipped', 'Equipped'),
         ('inventory', 'Inventory'),
-        ('shop', 'Shop'),
         ('drop', 'Drop'),
         ('none', 'None'),
         ('sold', 'Sold'), # TOTO POTÉ NASTAVIT NA UTOMATICKÉ PROMAZÁVÁNÍ, JE TO JEN POJISTKA
@@ -353,6 +366,7 @@ class Player_Items_EQP_ABLE(models.Model):
     item_img_ozn = models.CharField(default='item_default', max_length=100, null=True, blank=True) # odkaz na obrázek itemu, může být null pro unikátní předměty vytvořené jen pro hráče
     item_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inventory')
     stack_able = models.BooleanField(default=False)
+    item_lvl = models.IntegerField(default=0)
     
     amount = models.IntegerField(default=1)
     category = models.CharField(max_length=50, null=True, blank=True, choices=CATEGORY_CHOICES, default=None)
@@ -427,7 +441,6 @@ class Player_Item_Material(models.Model):
     STATUS_CHOICES = [
         ('equipped', 'Equipped'),
         ('inventory', 'Inventory'),
-        ('shop', 'Shop'),
         ('drop', 'Drop'),
         ('none', 'None'),
         ('sold', 'Sold'), # TOTO POTÉ NASTAVIT NA UTOMATICKÉ PROMAZÁVÁNÍ, JE TO JEN POJISTKA

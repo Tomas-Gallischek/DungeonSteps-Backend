@@ -11,9 +11,6 @@ urlpatterns = [
     path('admin_random_item/', views.admin_random_item, name='admin_random_item'),
     path('toggle_equip/', views.toggle_equip, name='toggle_equip'),
     path('init_fight/', views.init_fight, name='init_fight'),
-    path('shop_refresh/', views.shop_refresh, name='shop_refresh'),
-    path('shop/', views.get_shop, name='shop'),
-    path('shop_buy/', views.shop_buy, name='shop_buy'),
     path('sell_item/', views.sell_item, name='sell_item'),
     path('dungeon/<int:dungeon_id>/', views.get_dungeon_details, name='dungeon_details'),
 ]

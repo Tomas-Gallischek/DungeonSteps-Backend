@@ -43,6 +43,7 @@ def default_atr(user, role):
         player.int_base = 1
         player.vit_base = 5
         player.luck_base = 2
+        player.prec_base = 2
         player.save()
     elif role == 'hunter':
         player.str_base = 3
@@ -50,6 +51,7 @@ def default_atr(user, role):
         player.int_base = 2
         player.vit_base = 3
         player.luck_base = 4
+        player.prec_base = 2
         player.save()
     elif role == 'mage':
         player.str_base = 1
@@ -57,4 +59,5 @@ def default_atr(user, role):
         player.int_base = 5
         player.vit_base = 2
         player.luck_base = 4
+        player.prec_base = 2
         player.save()

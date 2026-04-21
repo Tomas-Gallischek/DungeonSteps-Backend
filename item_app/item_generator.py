@@ -204,6 +204,7 @@ def item_generator_all(user, item_status, item_base_id, amount):
             item_img_ozn=item.item_img_ozn,
             item_status=item_status,
             stack_able=False,
+            item_lvl=item.item_lvl if item.item_lvl else 0,
             
             amount=amount,
             category=item.category,
