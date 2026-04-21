@@ -80,6 +80,7 @@ class Player_info(models.Model):
     mana_lvl = models.IntegerField(default=0, blank=True)
     mana_eqp = models.IntegerField(default=0, blank=True)
     mana_max = models.IntegerField(default=0, blank=True)
+    mana_int_koef = models.IntegerField(("Mana Intelligence Coefficient"), default=1, blank=True)  # Koeficient pro výpočet many z inteligence
     mana_lvl_koef = models.IntegerField(("Mana Level Coefficient"), default=5, blank=True)  # Koeficient pro výpočet many z úrovně
 
 
@@ -245,9 +246,7 @@ class Player_info(models.Model):
             boots_attack_speed_bonus = base_attack_speed * boots_eqp.attack_speed_boots
         else:
             boots_attack_speed_bonus = 0
-
-        print(f"DEBUG: base_attack_speed={base_attack_speed}, armor_bonus={armor_attack_speed_bonus}, helmet_bonus={helmet_attack_speed_bonus}, boots_bonus={boots_attack_speed_bonus}")
-        self.attack_speed = base_attack_speed + armor_attack_speed_bonus + helmet_attack_speed_bonus + boots_attack_speed_bonus
+        self.attack_speed = round(base_attack_speed + armor_attack_speed_bonus + helmet_attack_speed_bonus + boots_attack_speed_bonus, 2)
         
 # AKTUALIZACE ARMORU
         brneni_armor = armor_eqp.armor if armor_eqp else 0
@@ -268,6 +267,9 @@ class Player_info(models.Model):
         self.hp_stats = self.vit_max * self.hp_vit_koef
         self.hp_lvl = self.lvl * self.hp_lvl_koef
         self.hp_max = self.hp_base + self.hp_stats + self.hp_lvl + self.hp_eqp
+        self.mana_stats = self.int_max * self.mana_int_koef
+        self.mana_lvl = self.lvl * self.mana_lvl_koef
+        self.mana_max = self.mana_base + self.mana_stats + self.mana_lvl + self.mana_eqp
 
     # AKTUALIZACE CRITICU (Závisí na atr, proto je to tady)
     
@@ -275,6 +277,7 @@ class Player_info(models.Model):
         if self.crit_chance > 50:
             self.crit_chance = 50
         
+        self.crit_multiplier = 1.5 + (self.prec_max // self.lvl) * 0.01 if self.prec_max > 0 else 1.5
         
     # AKTUALIZACE ODOLNOSTÍ (Závisí na atr, proto je to tady)
     

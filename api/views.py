@@ -24,7 +24,7 @@ from fight_app.models import fight_log
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
-from profile_app.register import default_atr, default_hp
+from profile_app.register import default_atr, default_hp_mana
 from item_app.item_generator import item_generator_all
 from fight_app.fight import fight
 from fight_app.loot import loot_created
@@ -515,7 +515,7 @@ def registrace(request):
     player.role = role
 
     # nastavení základních životů
-    default_hp(player=player, update_type='registrace')
+    default_hp_mana(player=player, update_type='registrace')
 
     player.save()
 

@@ -218,7 +218,7 @@ def item_generator_all(user, item_status, item_base_id, amount):
 
 
             armor=armor if item.category in ["armor", "helmet", "boots"] else None, # BRNĚNÍ, HELMY, BOTY  
-            dmg_type=dmg_type if item.category in ["armor", "helmet", "boots"] else None,
+            dmg_type=dmg_type,
         
         # ATTACK SPEED - U ZBRANÍ, BRNĚNÍ, HELMŮ A BOT
             attack_speed_weapon=attack_speed_weapon if item.category == "weapon" else None,
