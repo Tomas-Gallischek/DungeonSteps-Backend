@@ -481,9 +481,24 @@ class Player_Item_Material(models.Model):
     lvl_req = models.IntegerField(null=True, blank=True, default=1)
     rarity = models.CharField(null=True, blank=True, max_length=20, choices=RARITY_CHOICES, default='common')
     price_ks = models.FloatField(null=True, blank=True, default=0.1)
-    price_all = models.FloatField(null=True, blank=True, default=0.1)
+    price_all = models.FloatField(null=True, blank=True, default=0.1, help_text="POČÍTÁ SE AUTOMATICKY")
     stack_able = models.BooleanField(default=True)
 
+    def save(self, *args, **kwargs):
+        
+        if self.amount < 1:
+            self.delete()
+        else:
+            super().save(*args, **kwargs)
+            
+        if self.amount > 1 and not self.stack_able:
+            self.amount = 1
+            super().save(*args, **kwargs)
+            
+        if self.amount > 1:
+            self.price_all = self.price_ks * self.amount
+            super().save(*args, **kwargs)
+            
     def __str__(self):
         return f"{self.name} (ID: {self.item_base_id}) - {self.rarity} - Amount: {self.amount}"
     

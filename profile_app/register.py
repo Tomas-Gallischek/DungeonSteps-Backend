@@ -1,4 +1,30 @@
 from .models import Player_info
+from item_app.item_generator import item_generator_all
+from item_app.models import Item_default
+
+def admin_register(user):
+    player = Player_info.objects.filter(username=user).first()
+    
+    player.gold = 999999
+    
+    player.save()
+    
+    admin_base_eqp = [1401, 2401, 3101, 4401, 5401, 6401]
+    
+    for i in admin_base_eqp:
+        item_generator_all(user=user, item_status="inventory", item_base_id=i, amount=1)
+        
+    # MATERIAL (prvních 20 base ID jsou materiály 1. lokace):
+    
+    admin_base_materials = Item_default.objects.select_related('material_details').filter(category='material')
+    
+    
+    for i in admin_base_materials:
+        print(f"GENERUJI ITEM S BASE_ID: {i.item_base_id}")
+        item_generator_all(user=user, item_status="inventory", item_base_id=i.item_base_id, amount=1000) # 1000 od každého
+
+    
+    
 
 def default_hp_mana(player, update_type):
         

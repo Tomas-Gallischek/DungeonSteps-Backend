@@ -272,12 +272,23 @@ class ItemUpgrade(models.Model):
 
     def save(self, *args, **kwargs):
         
-    # AUTOMATICKÉ DOPLNĚNÍ CENY
-        lvl_koef = 5
-        up_koef = 1.5
+    # AUTOMATICKÉ DOPLNĚNÍ CENY (PŘEPIŠ I V EXCELU!)
+        lvl_koef = 1.5
+        up_koef = 1.2
         lvl_req = self.item.lvl_req if self.item.lvl_req else 1
         
-        final_cost = (lvl_koef * (lvl_req * lvl_req))
+        if self.item.category == 'weapon':
+            cat_koef = 1.25
+        elif self.item.category == 'armor':
+            cat_koef = 1.1
+        elif self.item.category in ['helmet', 'boots']:
+            cat_koef = 1.0
+        elif self.item.category in ['amulet', 'ring']:
+            cat_koef = 1.5
+        else:
+            cat_koef = 1.0
+        
+        final_cost = (lvl_koef * (lvl_req * lvl_req)) * cat_koef
         
         for lvl in range(1, self.lvl + 1):
             final_cost *= up_koef

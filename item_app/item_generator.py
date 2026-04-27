@@ -88,8 +88,6 @@ def item_generator_all(user, item_status, item_base_id, amount):
         attack_speed_armor = None
         armor_hp_bonus = 0
 
-    print(f"TEST: attack_speed_armor: {attack_speed_armor}")
-
 # SPECIÁLNĚ PRO HELMY
     if item.category == "helmet":
         attack_speed_helmet = random.uniform(item.helmet_details.min_minus_attack_speed, item.helmet_details.max_minus_attack_speed)
@@ -148,7 +146,7 @@ def item_generator_all(user, item_status, item_base_id, amount):
             gen_rarity = "common"
 
 # CENA
-    price_ks, price_all = price_generator(item, gen_rarity, player.lvl, amount)
+    price_ks = price_generator(item, gen_rarity, player.lvl)
     
 # BONUSY   
     # jelikož tady se to ukládá do slovníku tak to nechci komplikovat dalšíé funkcí
@@ -214,7 +212,6 @@ def item_generator_all(user, item_status, item_base_id, amount):
             rarity=gen_rarity,
             item_bonusy=bonusy,
             price_ks=price_ks,
-            price_all=price_all,
 
 
             armor=armor if item.category in ["armor", "helmet", "boots"] else None, # BRNĚNÍ, HELMY, BOTY  
@@ -272,12 +269,13 @@ def item_generator_all(user, item_status, item_base_id, amount):
     elif item.category == "material":
         # Pokud hráč již má tento materiál, aktualizujeme množství, jinak vytvoříme nový záznam
         if Player_Item_Material.objects.filter(player=player, item_base_id=item_base_id, rarity=gen_rarity).exists():
-
+            print(f"ITEM: {item.name} již existuje. Aktualizuji množství.")
             existing_item = Player_Item_Material.objects.get(player=player, item_base_id=item_base_id, rarity=gen_rarity)
             existing_item.amount += amount
             existing_item.save()
             
         else:
+            print(f"ITEM: {item.name} neexistuje. Vytvářím nový záznam.")
             Player_Item_Material.objects.create(
                 player=player,
                 item_base_id=item_base_id,
@@ -292,7 +290,6 @@ def item_generator_all(user, item_status, item_base_id, amount):
                 lvl_req=item.lvl_req,
                 rarity=gen_rarity,
                 price_ks=price_ks,
-                price_all=price_all,
                 stack_able=True,
             )
             stacks_items(player)
@@ -358,7 +355,7 @@ def rarity_generator(player_lvl):
     return gen_rarity
 
 
-def price_generator(item, rarity, player_lvl, amount):
+def price_generator(item, rarity, player_lvl):
     
     
     base_price = item.lvl_req / 10 # lvl 15 = 1.5, ,lvl 1 = 0.1
@@ -388,10 +385,9 @@ def price_generator(item, rarity, player_lvl, amount):
     
     price_ks = round(((base_price * rarity_multiplier[rarity]) * category_multiplier[item.category] * random_factor), 2)
     
-    price_all = price_ks * amount
 
     
-    return price_ks, price_all
+    return price_ks
     
 
 def talisman_generator():

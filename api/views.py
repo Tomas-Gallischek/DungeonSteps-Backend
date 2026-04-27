@@ -24,7 +24,7 @@ from fight_app.models import fight_log
 # NAČÍTÁNÍ FUNKCÍ
 from profile_app.economy import gold_plus
 from profile_app.lvl_xp_def import xp_plus
-from profile_app.register import default_atr, default_hp_mana
+from profile_app.register import default_atr, default_hp_mana, admin_register
 from item_app.item_generator import item_generator_all
 from item_app.upgrade_items import upgrade_item
 from fight_app.fight import fight
@@ -564,7 +564,7 @@ def registrace(request):
     elif role == 'Hraničář':
         role = 'hunter'
 
-    
+
     
     if not username or not password:
         return Response({"error": "Chybí jméno nebo heslo"}, status=status.HTTP_400_BAD_REQUEST)
@@ -592,11 +592,15 @@ def registrace(request):
     # Přiřazení základních atributů podle role
     default_atr(user=user, role=role)
     
-    # přiřazení základní výbavy
+    # přiřazení základní výbavy podle role
+    if username == "admin" or username == "admin2":
+        admin_register(user=user)
+        
+    else:
 
-    items_id = [1401,2401] #<-- REZAVÝ NŮŽ + KOŠILE
-    for i in items_id:
-        item_generator_all(user=user, item_status="inventory", item_base_id=i, amount=1)
+        items_id = [1401,2401] #<-- REZAVÝ NŮŽ + KOŠILE
+        for i in items_id:
+            item_generator_all(user=user, item_status="inventory", item_base_id=i, amount=1)
     
 # Vytvoření tokenu pro nového uživatele
     token, created = Token.objects.get_or_create(user=user)
