@@ -1,4 +1,5 @@
-from profile_app.models import Player_Items_EQP_ABLE
+from profile_app.models import Player_Items_EQP_ABLE, Player_info
+from profile_app.economy import gold_plus
 from item_app.models import ItemUpgrade, Item_default
 import random
 
@@ -7,6 +8,8 @@ def upgrade_item(item_id, base_id):
     
     item = Player_Items_EQP_ABLE.objects.get(item_id=item_id)
     default_item = Item_default.objects.get(item_base_id=base_id)
+    
+    profile = Player_info.objects.get(username=item.player.username)
     
     if item.item_lvl >= 10:
         raise ValueError("ITEM JE UŽ MAXIMÁLNĚ VYLEPŠENÝ")
@@ -20,6 +23,8 @@ def upgrade_item(item_id, base_id):
         item=default_item, 
         lvl=target_lvl
     ).first()
+    
+
 
     # 2. POJISTKA PROTI CHYBÁM
     if not upgrade_recipe:
@@ -44,6 +49,14 @@ def upgrade_item(item_id, base_id):
         print("Upgrade se PODAŘIL")
         result = "success"
         new_lvl = item.item_lvl + 1
+        
+        # ODEČTENÍ GOLDŮ:
+        goldCost = upgrade_recipe.gold_cost
+        print(f"Gold cost pro tento upgrade je: {goldCost}")
+        gold_plus(profile.username, -goldCost)
+        
+        
+        
         if item.category == 'weapon':
             
             dmg_up_koef = 1 + item.weapon_dmg_up_koef
@@ -109,5 +122,7 @@ def upgrade_item(item_id, base_id):
 
         else:
             raise ValueError("NEZNÁMÁ KATEGORIE ITEMU")
+        
+        
         
         return result

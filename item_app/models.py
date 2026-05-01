@@ -84,8 +84,8 @@ class Item_Armor_Submodel(models.Model):
     
     
     # UPGRADE
-    armor_armor_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
-    armor_hp_up_koef = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+    armor_up_koef_ARMOR = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
+    armor_up_koef_HP = models.FloatField(null=True, blank=True, default=0.1, help_text="Zvyšuje se o tento procento s každou úrovní (např. 0.1 = 10%)")
     
     def __str__(self):
         return f"{self.item.name} - {self.dmg_type} - {self.armor_base} - {self.min_minus_attack_speed} - {self.max_minus_attack_speed} - {self.plus_hp} - Armor Details"

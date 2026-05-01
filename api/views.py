@@ -62,8 +62,8 @@ def get_profile(request):
 
         coef_map[base.item_base_id] = {
             "weapon_dmg_up_koef": float(getattr(weapon_data, 'weapon_dmg_up_koef', 0.0) or 0.0) if weapon_data else 0.0,
-            "armor_armor_up_koef": float(getattr(armor_data, 'armor_armor_up_koef', 0.0) or 0.0) if armor_data else 0.0,
-            "armor_hp_up_koef": float(getattr(armor_data, 'armor_hp_up_koef', 0.0) or 0.0) if armor_data else 0.0,
+            "armor_up_koef_ARMOR": float(getattr(armor_data, 'armor_up_koef_ARMOR', 0.0) or 0.0) if armor_data else 0.0,
+            "armor_up_koef_HP": float(getattr(armor_data, 'armor_up_koef_HP', 0.0) or 0.0) if armor_data else 0.0,
             "helmet_armor_up_koef": float(getattr(helmet_data, 'helmet_armor_up_koef', 0.0) or 0.0) if helmet_data else 0.0,
             "boots_armor_up_koef": float(getattr(boots_data, 'boots_armor_up_koef', 0.0) or 0.0) if boots_data else 0.0,
             "boots_attack_speed_up_koef": float(getattr(boots_data, 'boots_attack_speed_up_koef', 0.0) or 0.0) if boots_data else 0.0,
@@ -125,8 +125,8 @@ def get_profile(request):
             "item_lvl": getattr(item, 'item_lvl', 1),
             
             "weapon_dmg_up_koef": coef_map.get(item.item_base_id, {}).get("weapon_dmg_up_koef", 0.0),
-            "armor_armor_up_koef": coef_map.get(item.item_base_id, {}).get("armor_armor_up_koef", 0.0),
-            "armor_hp_up_koef": coef_map.get(item.item_base_id, {}).get("armor_hp_up_koef", 0.0),
+            "armor_up_koef_ARMOR": coef_map.get(item.item_base_id, {}).get("armor_up_koef_ARMOR", 0.0),
+            "armor_up_koef_HP": coef_map.get(item.item_base_id, {}).get("armor_up_koef_HP", 0.0),
             "helmet_armor_up_koef": coef_map.get(item.item_base_id, {}).get("helmet_armor_up_koef", 0.0),
             "boots_armor_up_koef": coef_map.get(item.item_base_id, {}).get("boots_armor_up_koef", 0.0),
             "boots_attack_speed_up_koef": coef_map.get(item.item_base_id, {}).get("boots_attack_speed_up_koef", 0.0),
@@ -182,7 +182,7 @@ def get_all_upgrades(request):
     
     base_item_ids = Player_Items_EQP_ABLE.objects.filter(
         player=player, 
-        item_lvl__lt=9  
+        item_lvl__lt=10  
     ).values_list('item_base_id', flat=True).distinct()
 
     # I ZDE ODSTRANĚNO select_related PRO SUBMODELY (Zabraňuje pádu!)
@@ -217,8 +217,8 @@ def get_all_upgrades(request):
             "chance": upgrade.chance,
             
             "weapon_dmg_up_koef": float(getattr(weapon_data, 'weapon_dmg_up_koef', 0.0) or 0.0) if weapon_data else 0.0,
-            "armor_armor_up_koef": float(getattr(armor_data, 'armor_armor_up_koef', 0.0) or 0.0) if armor_data else 0.0,
-            "armor_hp_up_koef": float(getattr(armor_data, 'armor_hp_up_koef', 0.0) or 0.0) if armor_data else 0.0,
+            "armor_up_koef_ARMOR": float(getattr(armor_data, 'armor_up_koef_ARMOR', 0.0) or 0.0) if armor_data else 0.0,
+            "armor_up_koef_HP": float(getattr(armor_data, 'armor_up_koef_HP', 0.0) or 0.0) if armor_data else 0.0,
             "helmet_armor_up_koef": float(getattr(helmet_data, 'helmet_armor_up_koef', 0.0) or 0.0) if helmet_data else 0.0,
             "boots_armor_up_koef": float(getattr(boots_data, 'boots_armor_up_koef', 0.0) or 0.0) if boots_data else 0.0,
             "boots_attack_speed_up_koef": float(getattr(boots_data, 'boots_attack_speed_up_koef', 0.0) or 0.0) if boots_data else 0.0,

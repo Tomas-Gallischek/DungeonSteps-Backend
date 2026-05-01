@@ -100,21 +100,21 @@ class ItemUpgradeAdmin(admin.ModelAdmin):
                 # 1. MATERIAL
                     if ciklus == 1: 
                         if i >= mat_1_lvl:
-                            amount = mat_1_koef * (i - (mat_1_lvl - 1)) # Od 2. levelu se množství zvyšuje o koeficient
+                            amount = mat_1_koef * (i - (mat_1_lvl - 1))
                 # 2. MATERIAL
                     elif ciklus == 2: 
                         if i >= mat_2_lvl:
-                            amount = mat_2_koef * (i - (mat_2_lvl - 1)) # Od 2. levelu se množství zvyšuje o koeficient
+                            amount = mat_2_koef * (i - (mat_2_lvl - 1))
                 # 3. MATERIAL     
                     elif ciklus == 3: 
                         if i >= mat_3_lvl:
-                            amount = mat_3_koef * (i - (mat_3_lvl - 1)) # Od 4. levelu se množství zdvojnásobuje
+                            amount = mat_3_koef * (i - (mat_3_lvl - 1))
                         else:
                             amount = 0
                 # 4. MATERIAL     
                     elif ciklus == 4: 
                         if i >= mat_4_lvl:
-                            amount = mat_4_koef * (i - (mat_4_lvl - 1)) # Od 7. levelu se množství ztrojnásobuje
+                            amount = mat_4_koef * (i - (mat_4_lvl - 1))
                         else:
                             amount = 0
 

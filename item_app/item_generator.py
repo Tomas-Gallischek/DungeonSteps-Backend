@@ -232,8 +232,8 @@ def item_generator_all(user, item_status, item_base_id, amount):
             
         # POUZE BRNĚNÍ
             plus_hp=armor_hp_bonus if item.category == "armor" else None,
-            armor_armor_up_koef=item.armor_details.armor_armor_up_koef if item.category == "armor" else None,
-            armor_hp_up_koef=item.armor_details.armor_hp_up_koef if item.category == "armor" else None,
+            armor_up_koef_ARMOR=item.armor_details.armor_up_koef_ARMOR if item.category == "armor" else None,
+            armor_up_koef_HP=item.armor_details.armor_up_koef_HP if item.category == "armor" else None,
 
         # POUZE HELMY
             helmet_armor_up_koef=item.helmet_details.helmet_armor_up_koef if item.category == "helmet" else None,
