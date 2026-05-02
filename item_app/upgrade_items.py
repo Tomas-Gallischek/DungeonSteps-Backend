@@ -1,12 +1,13 @@
-from profile_app.models import Player_Items_EQP_ABLE, Player_info
+from profile_app.models import Player_Items_EQP_ABLE, Player_info, Player_Item_Material
 from profile_app.economy import gold_plus
-from item_app.models import ItemUpgrade, Item_default
+from item_app.models import ItemUpgrade, Item_default, UpgradeMaterial
 import random
 
 def upgrade_item(item_id, base_id):
     # FRONTEND KONTROLUJE, JESTLI MÁ HRÁČ DOSTATEK MATERIÁLŮ...
     
     item = Player_Items_EQP_ABLE.objects.get(item_id=item_id)
+    all_player_material = Player_Item_Material.objects.filter(player=item.player)
     default_item = Item_default.objects.get(item_base_id=base_id)
     
     profile = Player_info.objects.get(username=item.player.username)
@@ -50,12 +51,22 @@ def upgrade_item(item_id, base_id):
         result = "success"
         new_lvl = item.item_lvl + 1
         
-        # ODEČTENÍ GOLDŮ:
+# ODEČTENÍ GOLDŮ:
         goldCost = upgrade_recipe.gold_cost
         print(f"Gold cost pro tento upgrade je: {goldCost}")
         gold_plus(profile.username, -goldCost)
         
-        
+# odečítání materiálů:
+        this_upgrade = ItemUpgrade.objects.get(item=default_item, lvl=new_lvl)
+        materialCost = UpgradeMaterial.objects.filter(upgrade=this_upgrade)
+        for material in materialCost:
+            material_name = material.material.name
+            material_amount = material.amount
+            print(f"ODEBÍRÁM: {material_amount} kusů materiálu: {material_name}")
+            player_material = all_player_material.get(name=material_name)
+            player_material.amount -= material_amount
+            player_material.save()
+            
         
         if item.category == 'weapon':
             
